@@ -1,17 +1,12 @@
 name: Packaging
 
 on:
-  push:
-    branches: [main, master]
-    paths: [native-packages.yaml, packaging/**, contrib/omarchy/**, .github/workflows/packaging.yml, .github/workflows/release.yml]
-  pull_request:
-    paths: [native-packages.yaml, packaging/**, contrib/omarchy/**, .github/workflows/packaging.yml, .github/workflows/release.yml]
   workflow_dispatch:
     inputs:
       version:
-        description: Published version (empty tests the pinned v0.11.2 fixture)
+        description: Existing published Spoty version to package
         type: string
-        default: ''
+        required: true
       publish:
         description: Attach packages and run enabled downstream publishers
         type: boolean
@@ -44,9 +39,7 @@ jobs:
     uses: crmne/native-packages/.github/workflows/package.yml@999768410cf53cdc68c8679c09cb14de1a6bca7b # v0.8.1
     with:
       targets: linux-amd64,linux-arm64
-      # Packaging changes exercise real release binaries on both architectures.
-      # Update this fixture deliberately; releases use their own tag instead.
-      version: ${{ inputs.version || 'v0.11.2' }}
+      version: ${{ inputs.version }}
       publish: ${{ inputs.publish == true && inputs.version != '' }}
     secrets: inherit
 
@@ -64,16 +57,16 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: 1
         run: |
-          brew tap-new --no-git spotifast/validation
-          tap="$(brew --repository)/Library/Taps/spotifast/homebrew-validation"
+          brew tap-new --no-git spoty/validation
+          tap="$(brew --repository)/Library/Taps/spoty/homebrew-validation"
           mkdir -p "$tap/Casks"
-          cp dist/native-packages/recipes/homebrew/spotifast.rb "$tap/Casks/spotifast.rb"
-          brew install --cask spotifast/validation/spotifast
-          app=/Applications/Spotifast.app
+          cp dist/native-packages/recipes/homebrew/spoty.rb "$tap/Casks/spoty.rb"
+          brew install --cask spoty/validation/spoty
+          app=/Applications/Spoty.app
           executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
           "$app/Contents/MacOS/$executable" --version
           codesign --verify --strict "$app"
-          brew uninstall --cask spotifast/validation/spotifast
+          brew uninstall --cask spoty/validation/spoty
           test ! -e "$app"
 
   # The AppImage carries no libraries of its own, so the runner supplies
@@ -109,10 +102,10 @@ jobs:
             libdbus-1-3 libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 \
             libwayland-client0 libwayland-cursor0 libwayland-egl1 libx11-6 \
             libx11-xcb1 libxcursor1 libxi6 libxrandr2 libasound2t64 libpulse0
-          set -- dist/native-packages/packages/"$TARGET"/appimage/spotifast-*-"$ARCH".AppImage
+          set -- dist/native-packages/packages/"$TARGET"/appimage/spoty-*-"$ARCH".AppImage
           test "$#" -eq 1
           chmod +x "$1"
-          "$1" --appimage-extract-and-run --version | grep -Ex 'spotifast [0-9]+\.[0-9]+\.[0-9]+.*'
+          "$1" --appimage-extract-and-run --version | grep -Ex 'spoty [0-9]+\.[0-9]+\.[0-9]+.*'
 
   installation:
     name: Install (${{ matrix.os }}, ${{ matrix.image }})

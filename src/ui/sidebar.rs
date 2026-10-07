@@ -800,7 +800,31 @@ fn nav_row(
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
     if ui.is_rect_visible(rect) {
-        let color = if active || response.hovered() {
+        if active {
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(theme::RADIUS),
+                palette
+                    .accent
+                    .gamma_multiply(if palette.dark { 0.16 } else { 0.1 }),
+            );
+            ui.painter().rect_filled(
+                Rect::from_min_max(rect.left_top(), pos2(rect.left() + 3.0, rect.bottom())),
+                CornerRadius::same(2),
+                palette.accent,
+            );
+        } else if response.hovered() {
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(theme::RADIUS),
+                palette
+                    .surface_hover
+                    .gamma_multiply(if palette.dark { 0.6 } else { 0.85 }),
+            );
+        }
+        let color = if active {
+            palette.accent
+        } else if response.hovered() {
             palette.text
         } else {
             palette.secondary
@@ -819,6 +843,43 @@ fn nav_row(
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, label)
     });
+    theme::focus_ring(ui, &response);
+    response
+}
+
+/// A compact, rose-accented filter for the library's four content types.
+fn library_filter_button(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    label: &str,
+    active: bool,
+) -> egui::Response {
+    let color = if active {
+        palette.accent
+    } else {
+        palette.secondary
+    };
+    let galley = crate::bidi::layout_line(ui.painter(), label, theme::medium(12.5), color);
+    let padding = vec2(4.0, 5.0);
+    let size = galley.size() + padding * 2.0;
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, label)
+    });
+    if ui.is_rect_visible(rect) {
+        let fill = if active {
+            palette
+                .accent
+                .gamma_multiply(if palette.dark { 0.16 } else { 0.1 })
+        } else if response.hovered() {
+            palette.surface_hover
+        } else {
+            egui::Color32::TRANSPARENT
+        };
+        ui.painter().rect_filled(rect, rect.height() / 2.0, fill);
+        let pos = rect.center() - galley.size() / 2.0;
+        ui.painter().galley(pos, galley, color);
+    }
     theme::focus_ring(ui, &response);
     response
 }
@@ -957,14 +1018,14 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     ui.add_space(6.0);
 
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
+        ui.spacing_mut().item_spacing = vec2(2.0, 6.0);
         for (value, label) in [
             (Filter::Playlists, gettext(locale, "Playlists")),
             (Filter::Albums, gettext(locale, "Albums")),
             (Filter::Artists, gettext(locale, "Artists")),
             (Filter::Podcasts, gettext(locale, "Podcasts")),
         ] {
-            if theme::soft_button(ui, &palette, None, &label, filter == value).clicked() {
+            if library_filter_button(ui, &palette, &label, filter == value).clicked() {
                 filter = value;
             }
         }
@@ -2063,8 +2124,7 @@ mod ordering_tests {
     use crate::settings::Settings;
 
     fn app(name: &str) -> App {
-        let root =
-            std::env::temp_dir().join(format!("spotifast-order-{name}-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("spoty-order-{name}-{}", std::process::id()));
         let mut app = App::new(
             &crate::backend::Waker::default(),
             crate::paths::AppDirs {

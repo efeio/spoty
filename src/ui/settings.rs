@@ -60,7 +60,8 @@ impl<'a> RowText<'a> {
 }
 
 /// The guide to writing a palette file for the themes folder.
-const THEMES_GUIDE_URL: &str = "https://spotifast.rocks/settings-and-files/#custom-themes";
+const THEMES_GUIDE_URL: &str =
+    "https://github.com/efeio/spoty/blob/main/docs/_reference/settings-and-files.md#custom-themes";
 
 fn section_matches(needle: &str, title: &str, rows: &[RowText<'_>]) -> bool {
     let needle = needle.trim().to_lowercase();
@@ -248,7 +249,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             gettext(locale, "Personal Spotify app"),
             gettext(
                 locale,
-                "Use a personal Development Mode app for a separate API quota. The shared app stays active.",
+                "Use another app for supported requests. Apps on one developer account share Spotify's quota.",
             ),
         ),
         RowText::new(
@@ -376,7 +377,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     .clicked()
                 {
                     app.actions.push(Action::OpenUrl(
-                        "https://spotifast.rocks/make-it-even-faster/#make-a-spotify-app".into(),
+                        "https://github.com/efeio/spoty/blob/main/docs/_guide/make-it-even-faster.md#make-a-spotify-app".into(),
                     ));
                 }
             });
@@ -478,11 +479,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             super::keys::platform_shortcut(
                 &gettext(
                     locale,
-                    "Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q.",
+                    "Spoty hides to the system tray. Quit from the tray menu or with Ctrl+Q.",
                 ),
                 &gettext(
                     locale,
-                    "Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q.",
+                    "Spoty hides to the system tray. Quit from the tray menu or with Cmd+Q.",
                 ),
             )
             .to_owned(),
@@ -871,7 +872,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             custom_titlebar.clone(),
             gettext(
                 locale,
-                "Draw Spotifast's own title bar and window buttons instead of the standard Windows ones.",
+                "Draw Spoty's own title bar and window buttons instead of the standard Windows ones.",
             ),
         )
         .when(app.windows_controls_visible()),
@@ -1368,7 +1369,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 // the mini player opens.
                 const RANDOM: usize = usize::MAX;
                 let random = gettext(locale, "Random");
-                let mut options: Vec<(usize, &str)> = vec![(RANDOM, &random), (0, "Spotifast")];
+                let mut options: Vec<(usize, &str)> = vec![(RANDOM, &random), (0, "Spoty")];
                 options.extend(
                     choices
                         .iter()
@@ -1402,7 +1403,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     let label = options
                         .iter()
                         .find(|(value, _)| *value == showing)
-                        .map_or("Spotifast", |(_, label)| label);
+                        .map_or("Spoty", |(_, label)| label);
                     theme::subtle(
                         ui,
                         &palette,
@@ -1483,20 +1484,20 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 0 => gettext(
                     locale,
                     // Translators: {folder} is the path of the MilkDrop presets folder.
-                    "None yet in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "None yet in {folder}. Add .milk files here. Spoty downloads presets when MilkDrop first opens with an empty folder.",
                 )
                 .replace("{folder}", &folder),
                 1 => gettext(
                     locale,
                     // Translators: {folder} is the path of the MilkDrop presets folder.
-                    "One preset in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "One preset in {folder}. Add .milk files here. Spoty downloads presets when MilkDrop first opens with an empty folder.",
                 )
                 .replace("{folder}", &folder),
                 n => ngettext(
                     locale,
                     // Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
-                    "{count} preset in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
-                    "{count} presets in {folder}. Add .milk files here. Spotifast downloads presets when MilkDrop first opens with an empty folder.",
+                    "{count} preset in {folder}. Add .milk files here. Spoty downloads presets when MilkDrop first opens with an empty folder.",
+                    "{count} presets in {folder}. Add .milk files here. Spoty downloads presets when MilkDrop first opens with an empty folder.",
                     u32::try_from(n).unwrap_or(u32::MAX),
                 )
                 .replace("{count}", &n.to_string())
@@ -1857,7 +1858,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let source_code = gettext(locale, "Source code");
     let about_rows = [
         RowText::new(
-            format!("Spotifast {}", env!("CARGO_PKG_VERSION")),
+            format!("Spoty {}", env!("CARGO_PKG_VERSION")),
             built_with.clone(),
         ),
         RowText::new(
@@ -1874,7 +1875,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 ui.vertical(|ui| {
                     theme::text(
                         ui,
-                        format!("Spotifast {}", env!("CARGO_PKG_VERSION")),
+                        format!("Spoty {}", env!("CARGO_PKG_VERSION")),
                         theme::semibold(15.0),
                         palette.text,
                     );

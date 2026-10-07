@@ -17,14 +17,16 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(6.0);
     let greeting = crate::util::greeting(app.locale);
     theme::text(ui, greeting.as_ref(), theme::bold(30.0), palette.text);
-    ui.add_space(12.0);
+    ui.add_space(18.0);
     quick_access(app, ui);
     ui.add_space(16.0);
 
+    // Put the listener's own history first so returning to a familiar track
+    // takes less effort than browsing recommendations.
+    recently_played(app, ui);
     if app.settings.home.made_for_you.visible {
         made_for_you(app, ui);
     }
-    recently_played(app, ui);
     podcasts(app, ui);
     top_artists(app, ui);
     top_tracks(app, ui);
@@ -70,123 +72,144 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
             });
         }
     }
-    let available = ui.available_width();
-    let columns = ((available / 300.0).floor() as usize).clamp(2, 4);
-    let gap = 10.0;
-    let tile_width = (available - gap * (columns as f32 - 1.0)) / columns as f32;
-    let rows = tiles.len().div_ceil(columns);
-    for row in 0..rows {
-        ui.horizontal(|ui| {
-            ui.spacing_mut().item_spacing.x = gap;
-            for column in 0..columns {
-                let Some(Tile {
+    theme::section_title(ui, &palette, &gettext(app.locale, "Your shortcuts"));
+    ui.add_space(6.0);
+    crate::autoscroll::show(
+        ui,
+        egui::ScrollArea::horizontal().id_salt("home-quick-access"),
+        egui::Vec2b::new(true, false),
+        |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 10.0;
+                for Tile {
                     image,
                     name,
                     page,
                     uri,
                     liked,
                     owned_playlist,
-                }) = tiles.get(row * columns + column)
-                else {
-                    break;
-                };
-                let (rect, response) =
-                    ui.allocate_exact_size(vec2(tile_width, 60.0), Sense::click());
-                if ui.is_rect_visible(rect) {
-                    let hovered = ui.rect_contains_pointer(rect);
-                    let fill = if hovered {
-                        palette.surface_hover
-                    } else {
-                        palette.surface
-                    };
-                    ui.painter().rect_filled(rect, CornerRadius::same(6), fill);
-                    let cover = Rect::from_min_size(rect.min, Vec2::splat(60.0));
-                    if *liked {
-                        super::sidebar::liked_cover(ui, cover, 6.0);
-                    } else {
-                        widgets::paint_cover(
-                            ui,
-                            &palette,
-                            image.as_deref(),
-                            cover,
-                            6.0,
-                            Icon::Music,
-                            Some(app.backend.art()),
+                } in &tiles
+                {
+                    const COVER_SIZE: f32 = 52.0;
+                    let (rect, response) =
+                        ui.allocate_exact_size(vec2(232.0, 64.0), Sense::click());
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), name)
+                    });
+                    let hovered = response.hovered();
+                    let mut play_clicked = false;
+                    if ui.is_rect_visible(rect) {
+                        if hovered || response.has_focus() {
+                            ui.painter().rect_filled(
+                                rect,
+                                CornerRadius::same(theme::RADIUS),
+                                palette.surface_hover.gamma_multiply(if palette.dark {
+                                    0.72
+                                } else {
+                                    0.86
+                                }),
+                            );
+                        }
+                        let cover_rect =
+                            Rect::from_min_size(rect.min + vec2(6.0, 6.0), Vec2::splat(COVER_SIZE));
+                        if *liked {
+                            super::sidebar::liked_cover(ui, cover_rect, 6.0);
+                        } else {
+                            widgets::paint_cover(
+                                ui,
+                                &palette,
+                                image.as_deref(),
+                                cover_rect,
+                                6.0,
+                                Icon::Music,
+                                Some(app.backend.art()),
+                            );
+                        }
+                        let play_room = if (hovered || response.has_focus()) && uri.is_some() {
+                            42.0
+                        } else {
+                            8.0
+                        };
+                        let text_rect = Rect::from_min_max(
+                            pos2(cover_rect.right() + 10.0, rect.top()),
+                            pos2(rect.right() - play_room, rect.bottom()),
                         );
-                    }
-                    let play_room = if hovered && uri.is_some() { 52.0 } else { 12.0 };
-                    let text_rect = Rect::from_min_max(
-                        pos2(cover.right() + 12.0, rect.top()),
-                        pos2(rect.right() - play_room, rect.bottom()),
-                    );
-                    crate::bidi::paint_line(
-                        &ui.painter().with_clip_rect(text_rect),
-                        text_rect.left(),
-                        text_rect.right(),
-                        rect.center().y,
-                        name,
-                        theme::bold(14.5),
-                        palette.text,
-                    );
-                    if hovered && let Some(uri) = uri {
-                        let playing_here = app.playing_context_uri().as_deref()
-                            == Some(uri.as_str())
-                            && app.believed_playing();
-                        let button = Rect::from_center_size(
-                            pos2(rect.right() - 28.0, rect.center().y),
-                            Vec2::splat(40.0),
+                        crate::bidi::paint_line(
+                            &ui.painter().with_clip_rect(text_rect),
+                            text_rect.left(),
+                            text_rect.right(),
+                            rect.center().y,
+                            name,
+                            theme::medium(14.0),
+                            palette.text,
                         );
-                        let mut child =
-                            ui.new_child(egui::UiBuilder::new().max_rect(button).layout(
-                                egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
-                            ));
-                        if theme::circle_button(
-                            &mut child,
-                            if playing_here {
-                                Icon::PauseFilled
-                            } else {
-                                Icon::PlayFilled
-                            },
-                            40.0,
-                            palette.accent,
-                            palette.accent_hover,
-                            palette.on_accent,
-                            &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
-                        )
-                        .clicked()
+                        if (hovered || response.has_focus())
+                            && let Some(uri) = uri
                         {
-                            if playing_here {
-                                app.actions.push(Action::TogglePlay);
-                            } else {
-                                app.actions.push(Action::PlayContext {
-                                    uri: uri.clone(),
-                                    offset_uri: None,
-                                    offset_index: None,
-                                });
+                            let playing_here = app.playing_context_uri().as_deref()
+                                == Some(uri.as_str())
+                                && app.believed_playing();
+                            let button_rect = Rect::from_center_size(
+                                pos2(rect.right() - 22.0, rect.center().y),
+                                Vec2::splat(34.0),
+                            );
+                            let mut button_ui =
+                                ui.new_child(egui::UiBuilder::new().max_rect(button_rect).layout(
+                                    egui::Layout::centered_and_justified(
+                                        egui::Direction::LeftToRight,
+                                    ),
+                                ));
+                            play_clicked = theme::circle_button(
+                                &mut button_ui,
+                                if playing_here {
+                                    Icon::PauseFilled
+                                } else {
+                                    Icon::PlayFilled
+                                },
+                                34.0,
+                                palette.accent,
+                                palette.accent_hover,
+                                palette.on_accent,
+                                &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
+                            )
+                            .clicked();
+                            if play_clicked {
+                                if playing_here {
+                                    app.actions.push(Action::TogglePlay);
+                                } else {
+                                    app.actions.push(Action::PlayContext {
+                                        uri: uri.clone(),
+                                        offset_uri: None,
+                                        offset_index: None,
+                                    });
+                                }
                             }
                         }
                     }
+                    if !play_clicked && response.clicked() {
+                        app.actions.push(Action::Open(page.clone()));
+                    }
+                    crate::autoscroll::row(ui, &response);
+                    theme::focus_ring(ui, &response);
+                    if !liked && let Some(uri) = uri {
+                        egui::Popup::context_menu(&response)
+                            .id(ui.make_persistent_id(("quick-access-menu", uri)))
+                            .frame(widgets::menu_frame(&palette))
+                            .show(|ui| {
+                                widgets::context_menu_items(
+                                    ui,
+                                    app,
+                                    uri,
+                                    name,
+                                    owned_playlist.as_ref(),
+                                );
+                            });
+                    }
                 }
-                if response.clicked() {
-                    app.actions.push(Action::Open(page.clone()));
-                }
-                if !liked && let Some(uri) = uri {
-                    egui::Popup::context_menu(&response)
-                        .id(ui.make_persistent_id(("quick-access-menu", uri)))
-                        .frame(widgets::menu_frame(&palette))
-                        .show(|ui| {
-                            widgets::context_menu_items(
-                                ui,
-                                app,
-                                uri,
-                                name,
-                                owned_playlist.as_ref(),
-                            );
-                        });
-                }
-            }
-        });
-    }
+            });
+        },
+    );
+    ui.add_space(6.0);
 }
 
 fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
@@ -329,7 +352,10 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
         "recent",
         &gettext(app.locale, "Recently played"),
         |ui| {
-            for entry in &tracks {
+            if let Some(entry) = tracks.first() {
+                featured_recent_track(ui, app, &entry.track);
+            }
+            for entry in tracks.iter().skip(1) {
                 let track = &entry.track;
                 let card = widgets::card(
                     ui,
@@ -367,6 +393,131 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
             }
         },
     );
+}
+
+/// Gives the most recent track a larger, quieter home on the first shelf.
+/// The rest of the shelf stays in the familiar compact card layout.
+fn featured_recent_track(ui: &mut egui::Ui, app: &mut App, track: &crate::api::models::Track) {
+    const WIDTH: f32 = 400.0;
+    const HEIGHT: f32 = 220.0;
+    const COVER: f32 = 184.0;
+
+    let palette = app.palette;
+    let (rect, response) = ui.allocate_exact_size(vec2(WIDTH, HEIGHT), Sense::click());
+    let label = format!("{}, {}", track.name, track.artist_names());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label.clone())
+    });
+
+    let mut play_clicked = false;
+    if ui.is_rect_visible(rect) {
+        let hovered = response.hovered();
+        let playing_here =
+            app.now_playing().is_some_and(|now| now.uri == track.uri) && app.believed_playing();
+        let fill = if hovered {
+            palette.surface_hover
+        } else {
+            palette.panel
+        };
+        ui.painter().rect_filled(rect, CornerRadius::same(12), fill);
+        ui.painter().rect_stroke(
+            rect,
+            CornerRadius::same(12),
+            egui::Stroke::new(1.0, palette.outline),
+            egui::StrokeKind::Inside,
+        );
+
+        let cover_rect = Rect::from_min_size(rect.min + vec2(18.0, 18.0), Vec2::splat(COVER));
+        widgets::paint_shadow(ui, &palette, cover_rect, 8.0);
+        widgets::paint_cover(
+            ui,
+            &palette,
+            track.image(640),
+            cover_rect,
+            8.0,
+            Icon::Music,
+            Some(app.backend.art()),
+        );
+
+        let text_left = cover_rect.right() + 18.0;
+        let text_right = rect.right() - 18.0;
+        let title_rect = Rect::from_min_max(
+            pos2(text_left, cover_rect.top() + 24.0),
+            pos2(text_right, cover_rect.top() + 84.0),
+        );
+        crate::bidi::paint_line(
+            &ui.painter().with_clip_rect(title_rect),
+            title_rect.left(),
+            title_rect.right(),
+            title_rect.top() + 8.0,
+            &track.name,
+            theme::bold(22.0),
+            palette.text,
+        );
+        let artists = track.artist_names();
+        let subtitle_rect = Rect::from_min_max(
+            pos2(text_left, title_rect.bottom() + 2.0),
+            pos2(text_right, title_rect.bottom() + 36.0),
+        );
+        crate::bidi::paint_line(
+            &ui.painter().with_clip_rect(subtitle_rect),
+            subtitle_rect.left(),
+            subtitle_rect.right(),
+            subtitle_rect.top() + 2.0,
+            &artists,
+            theme::regular(13.5),
+            palette.secondary,
+        );
+
+        if hovered || response.has_focus() || playing_here {
+            let button_rect = Rect::from_center_size(
+                pos2(text_left + 22.0, rect.bottom() - 38.0),
+                Vec2::splat(44.0),
+            );
+            let mut button_ui = ui.new_child(egui::UiBuilder::new().max_rect(button_rect).layout(
+                egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+            ));
+            play_clicked = theme::circle_button(
+                &mut button_ui,
+                if playing_here {
+                    Icon::PauseFilled
+                } else {
+                    Icon::PlayFilled
+                },
+                44.0,
+                palette.accent,
+                palette.accent_hover,
+                palette.on_accent,
+                &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
+            )
+            .clicked();
+        }
+    }
+
+    if play_clicked {
+        if app.now_playing().is_some_and(|now| now.uri == track.uri) && app.believed_playing() {
+            app.actions.push(Action::TogglePlay);
+        } else {
+            app.actions.push(Action::PlayUris {
+                uris: vec![track.uri.clone()],
+                index: 0,
+            });
+        }
+    } else if response.clicked()
+        && let Some(album) = &track.album
+        && !album.id.is_empty()
+    {
+        app.actions
+            .push(Action::Open(Page::Album(album.id.clone())));
+    }
+    crate::autoscroll::row(ui, &response);
+    theme::focus_ring(ui, &response);
+    egui::Popup::context_menu(&response)
+        .id(ui.make_persistent_id(("home-featured-track-menu", &track.uri)))
+        .frame(widgets::menu_frame(&palette))
+        .show(|ui| {
+            widgets::item_menu(ui, app, &PlayableItem::Track(track.clone()), None, None);
+        });
 }
 
 /// Why an episode is on the podcast shelf.

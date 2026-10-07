@@ -1,0 +1,21 @@
+cask "spoty" do
+  version "@VERSION@"
+  sha256 "@MACOS_SHA256@"
+
+  url "https://github.com/efeio/spoty/releases/download/v#{version}/spoty-v#{version}-macos-universal.dmg"
+  name "Spoty"
+  desc "Native Spotify client"
+  homepage "https://github.com/efeio/spoty"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  app "Spoty.app"
+
+  zap trash: [
+    "~/Library/Application Support/io.github.efeio.spoty",
+    "~/Library/Caches/io.github.efeio.spoty",
+  ]
+end

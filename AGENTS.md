@@ -1,11 +1,11 @@
-# Spotifast agent guide
+# Spoty agent guide
 
 Follow `CONTRIBUTING.md`; it is the canonical product and contribution policy.
 These instructions add implementation constraints for coding agents.
 
 ## Product boundaries
 
-- Keep Spotifast a small native Spotify client. Do not add a browser engine,
+- Keep Spoty a small native Spotify client. Do not add a browser engine,
   telemetry, a hosted backend, or alternate sources for Spotify audio.
 - Playback capabilities come from librespot. Do not advertise or implement a
   capability merely because its name appears in a protobuf or enum. In
@@ -185,21 +185,18 @@ A release is not the tag alone. Do these in order:
 3. A prerelease stops here. Keep the stable version current on the website,
    Homebrew, and AUR. The prerelease remains available from GitHub's releases
    page.
-4. For a stable release, only after the GitHub release exists, update
-   `docs/_config.yml` `spotifast_version` and
-   `docs/_data/versions.yml`. The selector carries only the latest stable
-   version: replace its version entry, make it `current`, and point it at
-   `/download/`. Do not retain older version entries; they remain available
-   through the Changelog link. Never make the download page point at files
-   that do not exist yet.
+4. For the first stable Spoty release, only after the GitHub release exists,
+   add its version to `docs/_data/versions.yml` and update the download page
+   to link to artifacts that now exist. The selector carries only the latest
+   stable version. Never make the download page point at files that do not
+   exist yet.
 5. Update the Homebrew cask in the maintainer's tap and the AUR package from
    the release's `checksums.txt`. The packaging workflow handles configured
    destinations when `PUBLISH_HOMEBREW` and `PUBLISH_AUR` are enabled. Otherwise
    use the in-repository packaging CLI to prepare, review and publish them;
    see `PACKAGING.md`. Native package validation remains required.
 
-Before writing release notes, read the previous two stable releases and match
-their style. Start with a short plain-language summary, use `New` and `Fixed`
+Before writing Spoty release notes, use a short plain-language summary, use `New` and `Fixed`
 sections as applicable, lead each item with a bold user-facing result, credit
 contributors and reporters with the relevant issue or pull request numbers,
 include a `Thanks` section, and end with the full changelog link. Do not leave

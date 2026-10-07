@@ -63,8 +63,10 @@ struct ApiProfile {
 impl ApiProfile {
     pub const SHARED: Self = Self {
         source: ApiSource::Shared,
-        search_limit: 20,
-        artist_albums_limit: 50,
+        // Spoty's own app is in Development Mode, which permits smaller
+        // catalogue pages just like the optional personal app.
+        search_limit: 10,
+        artist_albums_limit: 10,
     };
     pub const PERSONAL: Self = Self {
         source: ApiSource::Personal,
@@ -398,7 +400,7 @@ mod tests {
     }
 
     fn provider(name: &str, source: ApiSource) -> TokenProvider {
-        let path = std::env::temp_dir().join(format!("spotifast-{name}-unused-token"));
+        let path = std::env::temp_dir().join(format!("spoty-{name}-unused-token"));
         let store = crate::credentials::Store::in_memory(crate::paths::AppDirs {
             config: path.join("config"),
             state: path.join("state"),

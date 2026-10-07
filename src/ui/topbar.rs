@@ -331,7 +331,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 app.locale,
                 id,
                 &mut app.search.query,
-                &gettext(locale, "What do you want to play?"),
+                &gettext(locale, "Search your music"),
                 search_width,
             );
             if app.search.focus_requested {

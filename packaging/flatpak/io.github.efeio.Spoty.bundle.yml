@@ -1,0 +1,37 @@
+# The release workflow's Flatpak: the binary the Linux job built, packaged
+# into the same sandbox as io.github.efeio.Spoty.yml describes. The
+# job unpacks the release tarball into built/ beside this file first.
+id: io.github.efeio.Spoty
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: spoty
+finish-args:
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  - --socket=pulseaudio
+  - --share=network
+  # Platform storage for this application's Spotify grants.
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.mpris.MediaPlayer2.spoty
+  - --persist=.local/state
+modules:
+  - name: spoty
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 spoty /app/bin/spoty
+      - install -Dm644 packaging/applications/*.desktop /app/share/applications/io.github.efeio.Spoty.desktop
+      - sed -i 's/^Icon=.*$/Icon=io.github.efeio.Spoty/;s/^StartupWMClass=spoty$/StartupWMClass=io.github.efeio.Spoty/' /app/share/applications/io.github.efeio.Spoty.desktop
+      - install -Dm644 packaging/icons/*.svg /app/share/icons/hicolor/scalable/apps/io.github.efeio.Spoty.svg
+      - install -Dm644 packaging/flatpak/io.github.efeio.Spoty.metainfo.xml /app/share/metainfo/io.github.efeio.Spoty.metainfo.xml
+      - install -Dm644 LICENSE /app/share/licenses/spoty/LICENSE
+    sources:
+      - type: dir
+        path: built
+      # Metainfo belongs to this packaging checkout, not the portable archive.
+      - type: file
+        path: io.github.efeio.Spoty.metainfo.xml
+        dest: packaging/flatpak

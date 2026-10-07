@@ -255,7 +255,7 @@ pub struct App {
     /// The window should close and reopen at once as the other kind: the
     /// big window or the Winamp mini player.
     pub switch_intent: bool,
-    /// Commands from control clients (a second `spotifast <verb>` launch,
+    /// Commands from control clients (a second `spoty <verb>` launch,
     /// a Raycast script, a link the desktop opens). Drained every frame.
     control_commands: Option<std::sync::Arc<std::sync::Mutex<Vec<ControlCommand>>>>,
     /// Now-playing snapshot for the control channel.
@@ -576,9 +576,9 @@ const HOME_PODCAST_SHOWS: usize = 8;
 const RECENTS_PAGE: u32 = 50;
 
 /// Who the desktop's media controls belong to. Links to Spotify, as
-/// `spotify:` URIs or web addresses, are what they may ask Spotifast to open.
+/// `spotify:` URIs or web addresses, are what they may ask Spoty to open.
 fn media_app() -> fastframe_now_playing::App {
-    let mut app = fastframe_now_playing::App::new("spotifast", "Spotifast");
+    let mut app = fastframe_now_playing::App::new("spoty", "Spoty");
     app.uri_schemes = vec!["spotify".into(), "https".into(), "http".into()];
     app
 }
@@ -634,19 +634,19 @@ fn play_pause_label(playing: bool) -> &'static str {
     if playing { "Pause" } else { "Play" }
 }
 
-/// The tray item: Spotifast's icon, and a menu that shows or hides the
+/// The tray item: Spoty's icon, and a menu that shows or hides the
 /// window, controls playback and quits.
 fn tray_config() -> fastframe_tray::Config {
     use fastframe_tray::MenuItem;
     fastframe_tray::Config {
-        id: "spotifast",
-        title: "Spotifast".into(),
+        id: "spoty",
+        title: "Spoty".into(),
         icon: util::app_icon_rgba,
         template_icon: Some(util::tray_template_rgba),
         themed_icon: true,
         menu_on_click: false,
         menu: vec![
-            MenuItem::action(TRAY_SHOW, "Show or hide Spotifast"),
+            MenuItem::action(TRAY_SHOW, "Show or hide Spoty"),
             MenuItem::Separator,
             MenuItem::action(TRAY_PLAY_PAUSE, play_pause_label(false)),
             MenuItem::action(TRAY_NEXT, "Next"),
@@ -977,7 +977,7 @@ impl App {
         self.wants_show = false;
         self.switch_intent = false;
         self.winamp_level_reassert = 0;
-        // A new window starts titled "Spotifast"; name the playing song
+        // A new window starts titled "Spoty"; name the playing song
         // again rather than trust what the replaced window was told.
         self.window_title.clear();
         if let Some(tray) = &mut self.tray {
@@ -2000,7 +2000,7 @@ impl App {
                             if manual || self.update.as_ref() != Some(&notice) {
                                 self.toast(
                                     // Translators: {version} is a version number such as 1.4.0.
-                                    gettext(self.locale, "Spotifast {version} is available")
+                                    gettext(self.locale, "Spoty {version} is available")
                                         .replace("{version}", &notice.version.to_string()),
                                 );
                             }
@@ -2017,7 +2017,7 @@ impl App {
                         Ok(None) => {
                             self.update = None;
                             if manual {
-                                self.toast(gettext(self.locale, "Spotifast is up to date"));
+                                self.toast(gettext(self.locale, "Spoty is up to date"));
                             } else {
                                 log::debug!("this is the newest release");
                             }
@@ -6322,7 +6322,7 @@ impl App {
                 self.pending_link = None;
                 self.toast_error(gettext(
                     self.locale,
-                    "Spotifast cannot open this kind of Spotify link",
+                    "Spoty cannot open this kind of Spotify link",
                 ));
             }
         }
@@ -7285,7 +7285,7 @@ impl App {
 
     /// `settle` is false while the slider is still moving: the level is heard
     /// at once, and Spotify is told where it ended up on release.
-    /// Whether the playing device takes volume changes from Spotifast.
+    /// Whether the playing device takes volume changes from Spoty.
     /// Spotify refuses them for some remote devices, so the controls are
     /// disabled for those rather than failing when used.
     pub fn can_set_volume(&self) -> bool {
@@ -9817,9 +9817,9 @@ impl App {
     /// Keeps the current track in the window and taskbar title (#94).
     fn sync_window_title(&mut self, ctx: &egui::Context) {
         let title = match self.now_playing().filter(|now| now.playing) {
-            Some(now) if now.subtitle.is_empty() => format!("{} - Spotifast", now.title),
+            Some(now) if now.subtitle.is_empty() => format!("{} - Spoty", now.title),
             Some(now) => format!("{} - {}", now.subtitle, now.title),
-            None => "Spotifast".to_string(),
+            None => "Spoty".to_string(),
         };
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -14393,7 +14393,7 @@ mod tests {
         );
     }
 
-    /// If Spotify returns an unchanged queue order after shuffle, Spotifast
+    /// If Spotify returns an unchanged queue order after shuffle, Spoty
     /// retries up to the limit and then accepts the result as a bounded fallback.
     #[test]
     fn unchanged_shuffle_result_has_bounded_fallback() {
@@ -14433,7 +14433,7 @@ mod tests {
             assert!(app.queue_recheck_at.is_some());
         }
 
-        // The next response exceeds the retry limit, so Spotifast accepts it.
+        // The next response exceeds the retry limit, so Spoty accepts it.
         app.handle_api(ApiResponse::Queue {
             seq,
             result: Ok(unchanged_response),
@@ -15090,8 +15090,7 @@ mod tests {
     }
 
     fn test_app(name: &str) -> App {
-        let root =
-            std::env::temp_dir().join(format!("spotifast-{name}-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("spoty-{name}-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let mut app = App::new(
             &Waker::default(),
@@ -16183,10 +16182,8 @@ mod tests {
     /// Closing and reopening restores queue rows and their manual split.
     #[test]
     fn the_queue_comes_back_after_a_restart() {
-        let root = std::env::temp_dir().join(format!(
-            "spotifast-queue-restart-test-{}",
-            std::process::id()
-        ));
+        let root =
+            std::env::temp_dir().join(format!("spoty-queue-restart-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let dirs = AppDirs {
             config: root.join("config"),
@@ -16442,7 +16439,7 @@ mod tests {
 
     /// A replaced window, as when the mini player's taskbar setting
     /// changes, is titled with the playing song again, not left as
-    /// "Spotifast".
+    /// "Spoty".
     #[test]
     fn a_new_window_is_titled_with_the_playing_song() {
         let ctx = egui::Context::default();
@@ -16813,7 +16810,7 @@ mod tests {
         assert!(!app.window_hidden, "a window this app still owns");
 
         // #when something asks for the window: the Dock, the tray, or
-        // `spotifast show`
+        // `spoty show`
         let mut output = ctx.run_ui(Default::default(), |ui| {
             app.apply(Action::ShowWindow, ui.ctx());
         });
@@ -17270,8 +17267,7 @@ mod tests {
     }
 
     fn headless_app() -> App {
-        let root =
-            std::env::temp_dir().join(format!("spotifast-volume-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("spoty-volume-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -18108,7 +18104,7 @@ mod tests {
                 manual,
                 result: Ok(Some(crate::updates::Release {
                     version: "1.2.3".into(),
-                    url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
+                    url: "https://github.com/efeio/spoty/releases/tag/v1.2.3".into(),
                 })),
             }]);
             let ctx = egui::Context::default();
@@ -18125,7 +18121,7 @@ mod tests {
         let mut app = headless_app();
         app.update = Some(crate::updates::Release {
             version: "1.2.3".into(),
-            url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
+            url: "https://github.com/efeio/spoty/releases/tag/v1.2.3".into(),
         });
         app.update_checking = true;
         app.handle_backend_events(vec![Event::UpdateChecked {
@@ -18137,7 +18133,7 @@ mod tests {
         assert_eq!(app.update, None);
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Spotifast is up to date")
+            Some("Spoty is up to date")
         );
 
         app.toasts.clear();
@@ -18176,7 +18172,7 @@ mod tests {
             manual: false,
             result: Ok(Some(crate::updates::Release {
                 version: "1.2.3".into(),
-                url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
+                url: "https://github.com/efeio/spoty/releases/tag/v1.2.3".into(),
             })),
         }]);
 
@@ -18186,7 +18182,7 @@ mod tests {
         );
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Spotifast 1.2.3 is available")
+            Some("Spoty 1.2.3 is available")
         );
     }
 
@@ -21352,7 +21348,7 @@ mod tests {
         app.selected_device = None;
         app.plays = crate::history::History::default();
         let state_dir =
-            std::env::temp_dir().join(format!("spotifast-repeat-history-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spoty-repeat-history-{}", std::process::id()));
         app.dirs.state = state_dir.clone();
         for sequence in [1, 2] {
             app.handle_local(LocalState {
@@ -22227,7 +22223,7 @@ mod tests {
                 "unknown",
                 // Local playback is this computer, which Spotify has not
                 // named because it is not a remote device.
-                "Spotifast",
+                "Spoty",
             ]
         );
         // No devices seen yet is an empty array, not an empty string, so a
@@ -22497,12 +22493,10 @@ mod tests {
     #[test]
     fn mpris_search_links_open_search_on_a_private_bus() {
         use std::time::{Duration, Instant};
-        const CHILD: &str = "SPOTIFAST_SEARCH_PRIVATE_BUS";
+        const CHILD: &str = "SPOTY_SEARCH_PRIVATE_BUS";
         if std::env::var_os(CHILD).is_none() {
-            let root = std::env::temp_dir().join(format!(
-                "spotifast-search-bus-{:016x}",
-                rand::random::<u64>()
-            ));
+            let root = std::env::temp_dir()
+                .join(format!("spoty-search-bus-{:016x}", rand::random::<u64>()));
             std::fs::create_dir(&root).unwrap();
             let config = root.join("session.conf");
             std::fs::write(&config, r#"<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen><auth>EXTERNAL</auth><policy context="default"><allow own="*"/><allow send_destination="*"/><allow receive_sender="*"/></policy></busconfig>"#).unwrap();
@@ -22541,7 +22535,7 @@ mod tests {
             .unwrap();
         let call = |uri: &str| {
             client.call_method(
-                Some("org.mpris.MediaPlayer2.spotifast"),
+                Some("org.mpris.MediaPlayer2.spoty"),
                 "/org/mpris/MediaPlayer2",
                 Some("org.mpris.MediaPlayer2.Player"),
                 "OpenUri",
@@ -22568,7 +22562,7 @@ mod tests {
         assert!(matches!(app.actions.as_slice(), [Action::OpenLink(_)]));
         let schemes: Vec<String> = zbus::blocking::Proxy::new(
             &client,
-            "org.mpris.MediaPlayer2.spotifast",
+            "org.mpris.MediaPlayer2.spoty",
             "/org/mpris/MediaPlayer2",
             "org.mpris.MediaPlayer2",
         )
@@ -22745,7 +22739,7 @@ mod tests {
     #[test]
     fn the_last_playlist_tree_stays_visible_for_its_account() {
         let root = std::env::temp_dir().join(format!(
-            "spotifast-rootlist-restart-test-{}",
+            "spoty-rootlist-restart-test-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&root);

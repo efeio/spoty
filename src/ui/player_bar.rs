@@ -654,28 +654,23 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
     let disc = slot(widths[2]);
     if loading || app.any_play_pending() {
         ui.painter()
-            .circle_filled(disc.center(), 18.0, palette.text);
+            .circle_filled(disc.center(), 18.0, palette.accent);
         let mut cell = centered(ui, disc);
-        theme::spinner(&mut cell, 22.0, palette.window);
+        theme::spinner(&mut cell, 22.0, palette.on_accent);
     } else {
         let icon = if playing {
             Icon::PauseFilled
         } else {
             Icon::PlayFilled
         };
-        let hover = if palette.dark {
-            egui::Color32::WHITE
-        } else {
-            palette.text
-        };
         let mut cell = centered(ui, disc);
         if theme::circle_button(
             &mut cell,
             icon,
             36.0,
-            palette.text,
-            hover,
-            palette.window,
+            palette.accent,
+            palette.accent_hover,
+            palette.on_accent,
             &if playing {
                 gettext(app.locale, "Pause")
             } else {
@@ -867,7 +862,7 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
         )
         .on_hover_text(gettext(
             app.locale,
-            "This device's volume can't be changed from Spotifast",
+            "This device's volume can't be changed from Spoty",
         ));
     }
     ui.add_space(4.0);

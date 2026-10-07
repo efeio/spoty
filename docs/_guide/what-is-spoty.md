@@ -1,26 +1,29 @@
 ---
-redirect_from: /what-is-fastpotify/
-title: What is Spotifast?
-description: What Spotifast offers, what you need to use it, and its current limits.
+redirect_from:
+  - /what-is-fastpotify/
+  - /what-is-spotifast/
+title: What is Spoty?
+description: What Spoty offers, what you need to use it, and its current limits.
 nav_order: 0
 ---
 
-## Why Spotifast
+## Why Spoty
 
-**Spotify, native and fast.** Spotifast is a lightweight Spotify app for
+**Spotify, native and fast.** Spoty is a lightweight Spotify app for
 Linux, macOS, and Windows. It opens in well under a second and typically uses
 100–250 MB of memory, while Spotify's desktop app often uses 600 MB to over 1 GB.
 
 Your Spotify playlists stay on your account.
 
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
-cannot play music through Spotifast on this computer or another device.
+cannot play music through Spoty on this computer or another device.
 
-![Spotifast Home with the playlist library, recommendations, queue, and player visible](/screenshot.png)
+> **Spoty is in development.** This page describes capabilities inherited
+> from its starting codebase. Spoty downloads are not available yet.
 
 ## What it does
 
-- **Plays music on this computer.** Spotifast appears as a Spotify Connect
+- **Plays music on this computer.** Spoty appears as a Spotify Connect
   device. Select it from your phone or play music in the app. Playback has
   no added gaps between songs and supports up to 320 kbps. Optional settings
   keep songs at a similar loudness and reduce repeat downloads by keeping
@@ -37,7 +40,7 @@ cannot play music through Spotifast on this computer or another device.
   result, to open that page.
 - **Background playback.** Closing the window keeps the music playing from
   the system tray. Use your keyboard's media keys to play, pause, and skip.
-- **Themes.** Choose light, dark, or your own colours. On Omarchy, Spotifast
+- **Themes.** Choose light, dark, or your own colours. On Omarchy, Spoty
   can follow your desktop theme automatically. Pages can also take a colour
   from album art.
 
@@ -46,21 +49,21 @@ cannot play music through Spotifast on this computer or another device.
 ## Will my Spotify account get banned?
 
 **We're not aware of any confirmed account bans caused by normal Premium
-listening through Spotifast or other players using the same playback
+listening through Spoty or other players using the same playback
 software, [librespot](https://github.com/librespot-org/librespot).**
 
-Spotifast plays music using your Spotify Premium subscription. It does not
+Spoty plays music using your Spotify Premium subscription. It does not
 unlock Premium for Free accounts, remove ads, export songs, or bypass
 Spotify's copy protection. You sign in on Spotify's own website, and
-Spotifast never receives your Spotify password.
+Spoty never receives your Spotify password.
 
-Spotifast is independent of Spotify, so we cannot guarantee Spotify's future
+Spoty is independent of Spotify, so we cannot guarantee Spotify's future
 decisions. Changes at Spotify can also temporarily interrupt playback until
 the app is updated.
 
 ## What it does not do
 
-Spotifast has a limited scope:
+Spoty has a limited scope:
 
 - **Playing needs Spotify Premium**, both on this computer and when
   controlling another device. Free accounts can browse and search.
@@ -68,32 +71,32 @@ Spotifast has a limited scope:
   to play music on this computer. [How it connects](/how-it-connects/)
   explains why.
 - **Spotify Lossless is not available.** Playback supports up to 320 kbps.
-  The playback software Spotifast uses, librespot, cannot play Spotify's
-  protected lossless audio. Spotifast will reconsider this if
+  The playback software Spoty uses, librespot, cannot play Spotify's
+  protected lossless audio. Spoty will reconsider this if
   [librespot adds lawful support](https://github.com/librespot-org/librespot/issues/1583).
 - No video podcasts or social features.
-- Spotifast is an **unofficial** app. Changes at Spotify can temporarily
-  break features until Spotifast is updated.
+- Spoty is an **unofficial** app. Changes at Spotify can temporarily
+  break features until Spoty is updated.
 
-Bug reports should include `spotifast.log`, `panic.log` after a crash, and
+Bug reports should include `spoty.log`, `panic.log` after a crash, and
 steps to reproduce the problem. See the
-[issue form](https://github.com/crmne/spotifast/issues/new/choose).
+[issue form](https://github.com/efeio/spoty/issues/new/choose).
 Development builds after 0.8.0 also record the app version, operating system,
 and graphics details in the log. If the window fails to open, the log can
 help explain why, even when you started the app from your desktop.
 
 ## Prior art
 
-Spotifast is written in Rust, with [egui](https://github.com/emilk/egui) for
+Spoty is written in Rust, with [egui](https://github.com/emilk/egui) for
 its interface and [librespot](https://github.com/librespot-org/librespot) for
 Spotify playback. It takes inspiration from
 [spotify-tui](https://github.com/Rigellute/spotify-tui),
 [spotify-player](https://github.com/aome510/spotify-player),
 [ncspot](https://github.com/hrkfdn/ncspot), and
-[Omarchy Spotify](https://github.com/stappmus/Omarchy-Spotify). Spotifast is
+[Omarchy Spotify](https://github.com/stappmus/Omarchy-Spotify). Spoty is
 a sibling of [ZapFast](https://zapfast.rocks), a native client for WhatsApp.
 Both are built on [fastframe](https://github.com/crmne/fastframe), the shared
 foundation for native Rust apps built with egui.
 
-Spotifast is an independent project, not affiliated with or endorsed by
+Spoty is an independent project, not affiliated with or endorsed by
 Spotify AB. Spotify is a trademark of Spotify AB.

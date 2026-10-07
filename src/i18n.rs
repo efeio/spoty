@@ -2,7 +2,31 @@
 //! for every message a catalog has not translated yet. The interface follows
 //! the operating system's language unless Settings names another one.
 
-pub use fastframe_i18n::{gettext, ngettext, pgettext};
+use std::borrow::Cow;
+
+/// Translates a message from the bundled catalogs.
+pub fn gettext<L: fastframe_i18n::Locale>(locale: L, source: &'static str) -> Cow<'static, str> {
+    fastframe_i18n::gettext(locale, source)
+}
+
+/// Translates a contextual message from the bundled catalogs.
+pub fn pgettext<L: fastframe_i18n::Locale>(
+    locale: L,
+    context: &'static str,
+    source: &'static str,
+) -> Cow<'static, str> {
+    fastframe_i18n::pgettext(locale, context, source)
+}
+
+/// Translates a plural message from the bundled catalogs.
+pub fn ngettext<L: fastframe_i18n::Locale>(
+    locale: L,
+    singular: &'static str,
+    plural: &'static str,
+    count: u32,
+) -> Cow<'static, str> {
+    fastframe_i18n::ngettext(locale, singular, plural, count)
+}
 
 include!(concat!(env!("OUT_DIR"), "/catalogs.rs"));
 

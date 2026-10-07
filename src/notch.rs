@@ -305,7 +305,7 @@ mod tests {
             art_path: None,
             uri: "spotify:track:test".into(),
             saved: false,
-            accent: Some([30, 215, 96]),
+            accent: Some([224, 121, 139]),
             is_episode: false,
             is_remote: false,
             shuffle: false,

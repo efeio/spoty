@@ -1,14 +1,14 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Spotifast
+Name=Spoty
 GenericName=Music Player
-Comment=A native Spotify client
-Exec=spotifast %u
+Comment=A native Spotify music client
+Exec=spoty %u
 Terminal=false
 Categories=AudioVideo;Audio;Player;Music;
-Keywords=spotify;music;player;streaming;spotifast;
-Icon=spotifast
+Keywords=spotify;music;player;streaming;spoty;
+Icon=spoty
 StartupNotify=true
-StartupWMClass=spotifast
+StartupWMClass=spoty
 MimeType=x-scheme-handler/spotify;

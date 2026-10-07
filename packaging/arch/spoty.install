@@ -1,6 +1,6 @@
-print_spotifast_post_install() {
+print_spoty_post_install() {
   cat <<'EOF2'
-Spotifast setup:
+Spoty setup:
 
   Launch it, press Sign in with Spotify, and approve in the browser.
   Playing music on this computer is one more one-time approval from the
@@ -9,14 +9,14 @@ Spotifast setup:
   Closing the window keeps the music playing in the system tray; quit from
   the tray menu or with Ctrl+Q.
 
-Docs: https://spotifast.rocks/
+Docs: https://github.com/efeio/spoty/
 EOF2
 }
 
 post_install() {
-  print_spotifast_post_install
+  print_spoty_post_install
 }
 
 post_upgrade() {
-  print_spotifast_post_install
+  print_spoty_post_install
 }

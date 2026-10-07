@@ -6,30 +6,34 @@ nav_order: 0
 
 ## Where things live
 
-Linux media controls use `playerctl --player=spotifast`.
+Linux media controls use `playerctl --player=spoty`.
 
-Spotifast follows each platform's conventions. On Linux:
+Spoty has its own application and credential-store identity. It leaves any
+Spotifast settings and credentials in place and does not import them. Sign in
+to Spotify again in Spoty.
+
+Spoty follows each platform's conventions. On Linux:
 
 | What | Where | Safe to delete? |
 | --- | --- | --- |
-| Settings | `~/.config/spotifast/settings.json` | Yes, you lose preferences |
-| Winamp skins | `~/.config/spotifast/skins/` | Yes, you add them again |
-| MilkDrop presets | `~/.config/spotifast/milkdrop/` | Yes, you fetch them again |
+| Settings | `~/.config/spoty/settings.json` | Yes, you lose preferences |
+| Winamp skins | `~/.config/spoty/skins/` | Yes, you add them again |
+| MilkDrop presets | `~/.config/spoty/milkdrop/` | Yes, you fetch them again |
 | Spotify grants (available since 0.8.0) | System credential store | Use Sign out in Settings |
-| Credential revocation markers (available since 0.8.0) | `~/.local/state/spotifast/credential-storage/` | Keep after a failed sign-out deletion |
-| Legacy shared Web API grant | `~/.local/state/spotifast/shared_web_api_token.json` | Removed after migration or sign-out |
-| Legacy personal Web API grant | `~/.local/state/spotifast/personal_web_api_token.json` | Removed after migration or sign-out |
-| Legacy playback credential | `~/.local/state/spotifast/credentials/` | Removed after migration or sign-out |
+| Credential revocation markers (available since 0.8.0) | `~/.local/state/spoty/credential-storage/` | Keep after a failed sign-out deletion |
+| Legacy shared Web API grant | `~/.local/state/spoty/shared_web_api_token.json` | Removed after migration or sign-out |
+| Legacy personal Web API grant | `~/.local/state/spoty/personal_web_api_token.json` | Removed after migration or sign-out |
+| Legacy playback credential | `~/.local/state/spoty/credentials/` | Removed after migration or sign-out |
 | Proxy password | System credential store | Clear the password and apply the manual proxy settings |
-| Legacy proxy password | `~/.local/state/spotifast/proxy_password` | Removed after protected migration |
-| Last session | `~/.local/state/spotifast/session.json` | Yes |
-| Play history | `~/.local/state/spotifast/history.json` | Yes |
-| Audio cache | `~/.cache/spotifast/audio/` | Always |
-| Artwork cache | `~/.cache/spotifast/art/` | Always |
-| Lyrics cache | `~/.cache/spotifast/lyrics/` | Always |
-| Account-scoped playlist page cache | `~/.cache/spotifast/playlists/<account-id>/` | Always |
-| Last run's log | `~/.local/state/spotifast/spotifast.log` | Always |
-| Crash log | `~/.local/state/spotifast/panic.log` | Always |
+| Legacy proxy password | `~/.local/state/spoty/proxy_password` | Removed after protected migration |
+| Last session | `~/.local/state/spoty/session.json` | Yes |
+| Play history | `~/.local/state/spoty/history.json` | Yes |
+| Audio cache | `~/.cache/spoty/audio/` | Always |
+| Artwork cache | `~/.cache/spoty/art/` | Always |
+| Lyrics cache | `~/.cache/spoty/lyrics/` | Always |
+| Account-scoped playlist page cache | `~/.cache/spoty/playlists/<account-id>/` | Always |
+| Last run's log | `~/.local/state/spoty/spoty.log` | Always |
+| Crash log | `~/.local/state/spoty/panic.log` | Always |
 
 Clearing caches never signs you out. Sign-out from Settings covers the shared
 and personal Web API grants and the independent playback credential.
@@ -38,7 +42,7 @@ The following credential storage is available since 0.8.0.
 
 Durable grants use **Secret Service on Linux**, **Keychain on macOS**, and
 **Credential Manager on Windows**, under the service name
-`rocks.spotifast.Spotifast`. Entries are separated by application state
+`io.github.efeio.spoty`. Entries are separated by application state
 location and grant type; Web grants carry their Client ID and must verify as
 the same account. Playback and receiver activation require that account too.
 Non-secret settings and session data remain readable JSON. Native credential
@@ -55,10 +59,10 @@ used for this session, with no new plaintext fallback file.
 On upgrade, each legacy grant is written to the protected store and read back
 before its old file is removed. Valid grants migrate without signing in again.
 If Spotify rejects a saved refresh grant, only that grant is forgotten so the
-next launch cannot keep restoring it. If migration fails, Spotifast reports it and
+next launch cannot keep restoring it. If migration fails, Spoty reports it and
 keeps the original so migration can be retried. That grant can still serve the
 current session. A successfully migrated grant is never replaced by a stale
-legacy copy. Librespot's reusable grant stays in memory until Spotifast saves
+legacy copy. Librespot's reusable grant stays in memory until Spoty saves
 it through this same store. Volume and disposable audio caches are independent.
 
 Sign-out invalidates pending authorization, refresh, and playback connections,
@@ -88,13 +92,13 @@ Older proxy passwords, whether in `settings.json` or the separate state file,
 are migrated and read back before their plaintext copies are removed. If that
 fails, the originals remain available for retry. Settings changes stay in
 memory until migration succeeds, so a save cannot erase the only password or
-associate it with a different proxy address. Spotifast reports this condition.
+associate it with a different proxy address. Spoty reports this condition.
 Newly entered passwords have no plaintext fallback. Settings store the confirmed
 proxy mode, host, port, and username, never an unapplied draft or password.
 
 Progress through a playlist is periodically cached as a contiguous prefix.
 When the playlist has not changed on Spotify, reopening it resumes from that
-prefix instead of requesting the same pages again. Spotifast validates the
+prefix instead of requesting the same pages again. Spoty validates the
 cache against Spotify's playlist snapshot and reported song count before
 showing it. A cache with a mismatched count is replaced by live rows even if
 its snapshot matches, so stale cached songs cannot choose the playback order.
@@ -190,26 +194,26 @@ automatic requests and shows a Retry button in the reserved row space.
 Since 0.8.0, Flatpak also preserves the fallback
 state directory used when `XDG_STATE_HOME` is unset. Session state, history,
 logs, and credential revocation markers survive a full quit and relaunch under
-`~/.var/app/rocks.spotifast.Spotifast/.local/state/spotifast/`. Configuration
+`~/.var/app/io.github.efeio.Spoty/.local/state/spoty/`. Configuration
 and caches remain under the app's `config/` and `cache/` directories. State
 already lost on quitting an older release cannot be recovered.
 
 On macOS, settings, state, and the logs are in
-`~/Library/Application Support/me.paolino.spotifast` and the caches in
-`~/Library/Caches/me.paolino.spotifast`. On Windows, settings are in
-`%APPDATA%\paolino\spotifast\config`, state and the logs in
-`%LOCALAPPDATA%\paolino\spotifast\data`, and the caches in
-`%LOCALAPPDATA%\paolino\spotifast\cache`.
+`~/Library/Application Support/io.github.efeio.spoty` and the caches in
+`~/Library/Caches/io.github.efeio.spoty`. On Windows, settings are in
+`%APPDATA%\efeio\spoty\config`, state and the logs in
+`%LOCALAPPDATA%\efeio\spoty\data`, and the caches in
+`%LOCALAPPDATA%\efeio\spoty\cache`.
 
 The running copy keeps its single-instance files in a private directory:
-`$XDG_RUNTIME_DIR/spotifast` on Linux (inside Flatpak, the app's own runtime
-directory), a `spotifast` folder in your private temporary directory
+`$XDG_RUNTIME_DIR/spoty` on Linux (inside Flatpak, the app's own runtime
+directory), a `spoty` folder in your private temporary directory
 (`$TMPDIR`) on macOS, and an `instance` folder in the state directory on
 Windows. `instance.lock` marks the running copy; the system releases it when
-Spotifast quits or crashes. `instance.sock` (Linux and macOS) is the socket
-a second launch and the `spotifast` command reach it through, which only your
+Spoty quits or crashes. `instance.sock` (Linux and macOS) is the socket
+a second launch and the `spoty` command reach it through, which only your
 user can open. On Windows, `instance.key` holds the loopback port and a
-random token that every request must carry. Spotifast writes them on each
+random token that every request must carry. Spoty writes them on each
 start; nothing in them needs keeping.
 
 ## settings.json
@@ -219,12 +223,12 @@ main fields are:
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `device_name` | `Spotifast` | Name on Spotify Connect |
+| `device_name` | `Spoty` | Name on Spotify Connect |
 | `bitrate` | `320` | 96, 160, or 320 kbps |
 | `normalisation` | `false` | Volume normalisation |
 | `autoplay` | `true` | Keep playing similar music at the end |
 | `gapless` | `true` | Gapless playback |
-| `audio_backend` | platform | `pulseaudio` or `rodio` on Linux. `rodio` is Spotifast's own output, through ALSA; librespot's separate rodio backend is no longer built in, and a backend this build lacks plays through Spotifast's own output |
+| `audio_backend` | platform | `pulseaudio` or `rodio` on Linux. `rodio` is Spoty's own output, through ALSA; librespot's separate rodio backend is no longer built in, and a backend this build lacks plays through Spoty's own output |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
 | `theme` | `system` | Follow the system appearance by default; explicit `dark` and `light` choices remain available |
 | `language` | `system` | Since 0.10.0: the interface language. `system` follows the operating system's preferred languages and falls back to English; a tag such as `es`, `de-DE`, `pt-BR` or `zh-Hant` selects that language. An unknown tag follows the system |
@@ -235,7 +239,7 @@ main fields are:
 | `player_bar_vis` | `off` | Since 0.11.0: what moves behind the player bar while a song plays on this computer: `off`, `spectrum` or `waveform` |
 | `library_sort` | `{}` | Per-section Library order overrides, since 0.8.0: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
 | `sidebar_order` | `[]` | Saved local playlist arrangement, including an unpinned Liked Songs, retained when another sort is selected |
-| `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `spotifast:liked-songs`, a local key never sent to Spotify |
+| `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `spoty:liked-songs`, a local key never sent to Spotify |
 | `liked_songs_pinned` | `true` | Keep Liked Songs in the pin block; older settings place it first until moved |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `sidebar_grid` | `false` | Library entries as responsive cover cards instead of rows |
@@ -243,7 +247,7 @@ main fields are:
 | `middle_click_autoscroll` | `false` | Linux only: middle-click a list to autoscroll it. Windows always autoscrolls and macOS never does |
 | `winamp_window` | `false` | The window is the Winamp mini player |
 | `winamp_show_taskbar` | `true` | Windows since 0.8.0, and Linux X11 sessions: show the Winamp window's taskbar button; the main window always keeps its button. Wayland and macOS ignore it |
-| `custom_titlebar` | `false` | Windows only, since 0.10.0: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |
+| `custom_titlebar` | `false` | Windows only, since 0.10.0: draw Spoty's own title bar and window buttons instead of the standard Windows ones |
 | `skin` | none | File or folder name in the skins folder; blank uses the built-in skin |
 | `random_skin` | `false` | Since 0.11.0: pick a different skin (built-in or installed) each time the mini player opens; `skin` holds the one picked |
 | `skin_scale` | by display | Screen pixels per skin pixel, 1 to 4 |
@@ -279,7 +283,7 @@ main fields are:
 ## Command line
 
 ```
-spotifast [OPTIONS] [LINK]
+spoty [OPTIONS] [LINK]
 
   LINK                  A Spotify link to open: spotify:track:…, or an
                         open.spotify.com address
@@ -287,12 +291,12 @@ spotifast [OPTIONS] [LINK]
   -v, --verbose         More logs from librespot and the API client
 ```
 
-A link goes to the running Spotifast when there is one, which then opens
+A link goes to the running Spoty when there is one, which then opens
 the page and brings its window forward; otherwise the app starts on it. The
 desktop's handler for `spotify:` links runs exactly this.
 
-Attach `spotifast.log` from the state directory to bug reports. It contains
-the last run's output, including extra lines from `spotifast -v`. After a
+Attach `spoty.log` from the state directory to bug reports. It contains
+the last run's output, including extra lines from `spoty -v`. After a
 crash, attach `panic.log` too.
 
 ## Demo mode
@@ -351,7 +355,7 @@ directory; the ordinary demo does not scan your real themes folder.
 ## Home shelves
 
 Since 0.8.0, you can hide **Made for you** and **Recommended for you**
-from Home independently. Quit Spotifast before editing `settings.json`, then
+from Home independently. Quit Spoty before editing `settings.json`, then
 restart it. Add this field to hide both:
 
 ```json
@@ -368,16 +372,16 @@ refresh in the background.
 
 ## Custom themes
 
-Since 0.11.0, Spotifast puts eight palettes in the `themes` folder beside
+Since 0.11.0, Spoty puts eight palettes in the `themes` folder beside
 `settings.json` the first time it starts: Catppuccin, Catppuccin Latte,
 Nord, Ristretto, Rose Pine, Rose Pine Dawn, Rose Pine Moon and Tokyo
 Night. They are ordinary palette files: read them to see how a theme is
-written, change them, or delete the ones you do not want. Spotifast never
+written, change them, or delete the ones you do not want. Spoty never
 rewrites them, and a deleted one stays deleted; `.installed-palettes` in
 the folder records which it has already put there.
 
 To make your own, add JSON files to the `themes` folder.
-Run `spotifast reload-themes` if the app is already open, then select it
+Run `spoty reload-themes` if the app is already open, then select it
 under **Settings → Appearance → Theme**, where it is listed by its filename
 without `.json`.
 The default is **Follow system**. It uses your desktop’s light/dark appearance,
@@ -394,8 +398,8 @@ Themes change colors and keep the app's existing fonts.
 needed and opens it in your file
 manager, using the same button style as the Winamp skins folder.
 After adding or editing a JSON file on macOS or Windows, run
-`spotifast reload-themes` to refresh the list and the selected palette without
-restarting playback. Since 0.10.2, Spotifast on Linux notices changes to the
+`spoty reload-themes` to refresh the list and the selected palette without
+restarting playback. Since 0.10.2, Spoty on Linux notices changes to the
 themes folder by itself.
 Choosing a built-in theme clears the custom selection.
 Since 0.11.0, whenever the colours change (a theme picked here, Omarchy
@@ -423,7 +427,7 @@ Supported colors are `window`, `panel`, `surface`, `surface_hover`,
 `accent_hover`, `on_accent`, `danger`, `warning`, `overlay`, and `shadow`.
 Values must be `#RRGGBB` or `#RRGGBBAA`.
 
-Files are read in the background at launch and when `spotifast reload-themes`
+Files are read in the background at launch and when `spoty reload-themes`
 is called. The command updates the selected palette without interrupting
 playback, changing your selection or showing the window. It does not start a
 stopped app. Repeated requests are combined while a scan is running. On Linux,
@@ -433,7 +437,7 @@ subdirectories. Each file is limited to 64 KiB. Keep at most 128 JSON files and
 512 total entries in the themes folder; the saved selection is still checked
 when a folder exceeds these limits.
 
-Invalid files are skipped with a warning in the log. Spotifast remembers the
+Invalid files are skipped with a warning in the log. Spoty remembers the
 last accepted custom palette in `settings.json`. If the selected file is
 removed or becomes invalid, that appearance stays in place, including after
 a restart, and the Theme row explains the problem. Other preferences are
@@ -459,7 +463,7 @@ and track later theme changes. An existing explicit Dark, Light or custom
 choice stays selected. Choose **Follow system** or **Omarchy** under
 **Settings → Appearance → Theme** to follow Omarchy instead.
 
-Since 0.10.2, portable archives and Cargo builds follow Omarchy too: Spotifast
+Since 0.10.2, portable archives and Cargo builds follow Omarchy too: Spoty
 reads the palette Omarchy rendered for it, or renders the template itself from
 the current theme's colours, and picks up theme changes without the hook.
 
@@ -470,40 +474,40 @@ or hook. A package uninstall removes the shared integration assets; your user
 configuration remains, like the rest of your preferences.
 
 For a manual installation, the repository includes an
-[Omarchy template](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast.json.tpl)
-and a [theme-change hook](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast-theme).
+[Omarchy template](https://github.com/efeio/spoty/blob/main/contrib/omarchy/spoty.json.tpl)
+and a [theme-change hook](https://github.com/efeio/spoty/blob/main/contrib/omarchy/spoty-theme).
 Omarchy resolves its light/dark mode and colors through its
 [template system](https://omarchy.org/manual/making-your-own-theme/).
 The hook copies the result atomically into `themes/omarchy.json`, then asks a
-running Spotifast to reload it. It does not change your desktop theme or your
-Spotifast selection itself.
+running Spoty to reload it. It does not change your desktop theme or your
+Spoty selection itself.
 
 For portable or Cargo installations, install the two files from a checkout:
 
 ```sh
 mkdir -p ~/.config/omarchy/themed
-install -m 644 contrib/omarchy/spotifast.json.tpl ~/.config/omarchy/themed/
-omarchy hook install theme-set contrib/omarchy/spotifast-theme
+install -m 644 contrib/omarchy/spoty.json.tpl ~/.config/omarchy/themed/
+omarchy hook install theme-set contrib/omarchy/spoty-theme
 ```
 
 Apply a theme through Omarchy's theme picker, then select **Omarchy** in
-Spotifast's **Settings → Appearance → Theme** once. Later Omarchy changes update
+Spoty's **Settings → Appearance → Theme** once. Later Omarchy changes update
 that palette while music keeps playing. Turn off album-art tinting if every
 page should keep the theme's fixed colors.
 
 The hook uses Omarchy's current theme at
-`~/.local/state/omarchy/current/theme` and Spotifast's existing
-`${XDG_CONFIG_HOME:-~/.config}/spotifast/themes` directory. The shipped hook
+`~/.local/state/omarchy/current/theme` and Spoty's existing
+`${XDG_CONFIG_HOME:-~/.config}/spoty/themes` directory. The shipped hook
 is updated automatically if its contents have not been customized. A custom profile can set
-`SPOTIFAST_THEMES_DIR` in the installed hook; this example uses the native
-`spotifast` command, not a Flatpak launcher. Themes without `colors.toml` need
-their own `spotifast.json` file. Missing or invalid palettes leave the last
+`SPOTY_THEMES_DIR` in the installed hook; this example uses the native
+`spoty` command, not a Flatpak launcher. Themes without `colors.toml` need
+their own `spoty.json` file. Missing or invalid palettes leave the last
 accepted appearance in place.
 
-To stop following Omarchy, choose Dark, Light or another custom theme in Spotifast.
+To stop following Omarchy, choose Dark, Light or another custom theme in Spoty.
 For a manual installation, remove only
-`~/.config/omarchy/hooks/theme-set.d/spotifast-theme` and
-`~/.config/omarchy/themed/spotifast.json.tpl`. Other hooks remain in place.
+`~/.config/omarchy/hooks/theme-set.d/spoty-theme` and
+`~/.config/omarchy/themed/spoty.json.tpl`. Other hooks remain in place.
 Packaged launches recreate missing integration files. To disable the hook
 while keeping the package installed, leave that hook file empty instead;
 existing user files are preserved. Selecting Dark or Light is sufficient to stop following Omarchy's colors.

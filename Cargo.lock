@@ -5839,7 +5839,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "spotifast"
+name = "spoty"
 version = "0.12.0"
 dependencies = [
  "aes 0.8.4",

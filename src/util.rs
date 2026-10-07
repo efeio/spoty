@@ -196,30 +196,50 @@ pub fn open_spotify_url(uri: &str) -> Option<String> {
     Some(format!("https://open.spotify.com/{kind}/{id}"))
 }
 
-/// The menu-bar shape for macOS: the circle with the play triangle punched
-/// out. macOS template images use only the alpha channel and paint the
-/// shape themselves, black in a light menu bar and white in a dark one.
+/// The Spoty monogram for macOS. Template images use alpha only, letting
+/// macOS paint the mark for the current menu-bar appearance.
 pub fn tray_template_rgba(size: usize) -> Vec<u8> {
-    let mut rgba = mark_rgba(size, false);
-    for pixel in rgba.as_chunks_mut::<4>().0 {
-        // The triangle is the dark colour; make it a hole instead.
-        if pixel[1] < 128 {
-            pixel[3] = 0;
+    let scale = size as f32 / 128.0;
+    let mut rgba = vec![0u8; size * size * 4];
+    for y in 0..size {
+        for x in 0..size {
+            let u = (x as f32 + 0.5) / scale;
+            let v = (y as f32 + 0.5) / scale;
+            let coverage = polygon_coverage((u, v), scale);
+            let index = (y * size + x) * 4;
+            rgba[index..index + 3].fill(0);
+            rgba[index + 3] = (coverage * 255.0).round() as u8;
         }
-        pixel[0] = 0;
-        pixel[1] = 0;
-        pixel[2] = 0;
     }
     rgba
 }
 
-/// The mark rasterised to pixels: the window icon, the trays and the logo
-/// drawn in the app (`theme::logo`) all use this one picture.
-///
-/// It is the polished disc of `packaging/icons` at every size: a darker rim
-/// around a lit face.
+/// Spoty's original monogram: the window icon, trays and in-app logo share it.
 pub fn app_icon_rgba(size: usize) -> Vec<u8> {
-    mark_rgba(size, true)
+    const BACK_TOP: [f32; 3] = [63.0, 53.0, 65.0];
+    const BACK_BOTTOM: [f32; 3] = [37.0, 32.0, 40.0];
+    const ROSE: [f32; 3] = [215.0, 168.0, 181.0];
+    let scale = size as f32 / 128.0;
+    let mut rgba = vec![0u8; size * size * 4];
+    for y in 0..size {
+        for x in 0..size {
+            let u = (x as f32 + 0.5) / scale;
+            let v = (y as f32 + 0.5) / scale;
+            let rectangle = rounded_rect_coverage((u, v), scale);
+            let glyph = polygon_coverage((u, v), scale);
+            if rectangle == 0.0 {
+                continue;
+            }
+            let mut colour = mix(BACK_TOP, BACK_BOTTOM, (v - 4.0) / 120.0);
+            colour = mix(colour, ROSE, glyph);
+            let index = (y * size + x) * 4;
+            rgba[index] = colour[0].round() as u8;
+            rgba[index + 1] = colour[1].round() as u8;
+            rgba[index + 2] = colour[2].round() as u8;
+            rgba[index + 3] = (rectangle * 255.0).round() as u8;
+        }
+    }
+    rgba
 }
 
 /// Mixes two colours, `t` of the way from `a` to `b`.
@@ -232,77 +252,72 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     ]
 }
 
-/// How far `p` is from the triangle `a`, `b`, `c`: zero inside it.
-fn triangle_distance(p: (f32, f32), a: (f32, f32), b: (f32, f32), c: (f32, f32)) -> f32 {
-    let edge = |a: (f32, f32), b: (f32, f32)| {
+const SPOTY_GLYPH: &[(f32, f32)] = &[
+    (82.0, 42.0),
+    (78.0, 53.0),
+    (68.0, 49.0),
+    (60.0, 49.0),
+    (55.0, 52.0),
+    (55.0, 57.0),
+    (58.0, 60.0),
+    (72.0, 63.0),
+    (80.0, 66.0),
+    (85.0, 71.0),
+    (87.0, 77.0),
+    (85.0, 84.0),
+    (80.0, 90.0),
+    (73.0, 94.0),
+    (65.0, 96.0),
+    (57.0, 95.0),
+    (49.0, 92.0),
+    (42.0, 88.0),
+    (49.0, 78.0),
+    (56.0, 82.0),
+    (63.0, 85.0),
+    (70.0, 84.0),
+    (74.0, 82.0),
+    (75.0, 79.0),
+    (72.0, 77.0),
+    (68.0, 76.0),
+    (58.0, 73.0),
+    (51.0, 70.0),
+    (47.0, 65.0),
+    (45.0, 59.0),
+    (47.0, 53.0),
+    (52.0, 47.0),
+    (59.0, 43.0),
+    (67.0, 41.0),
+    (76.0, 41.0),
+];
+
+fn polygon_coverage(point: (f32, f32), scale: f32) -> f32 {
+    let mut inside = false;
+    let mut distance_squared = f32::INFINITY;
+    for index in 0..SPOTY_GLYPH.len() {
+        let a = SPOTY_GLYPH[index];
+        let b = SPOTY_GLYPH[(index + 1) % SPOTY_GLYPH.len()];
         let (ex, ey) = (b.0 - a.0, b.1 - a.1);
-        let (px, py) = (p.0 - a.0, p.1 - a.1);
+        let (px, py) = (point.0 - a.0, point.1 - a.1);
         let along = ((px * ex + py * ey) / (ex * ex + ey * ey)).clamp(0.0, 1.0);
         let (dx, dy) = (px - ex * along, py - ey * along);
-        ((dx * dx + dy * dy).sqrt(), ex * py - ey * px)
-    };
-    let (d1, s1) = edge(a, b);
-    let (d2, s2) = edge(b, c);
-    let (d3, s3) = edge(c, a);
-    let inside = (s1 >= 0.0 && s2 >= 0.0 && s3 >= 0.0) || (s1 <= 0.0 && s2 <= 0.0 && s3 <= 0.0);
-    if inside { 0.0 } else { d1.min(d2).min(d3) }
-}
-
-/// The mark on a 128-unit square, as `packaging/icons/spotifast.svg` draws
-/// it: a disc of radius 62 and a play triangle with corners rounded by 5,
-/// set a little left of its box so it looks centred. `polished` adds the
-/// darker rim, the lit face and the bright edge between them.
-fn mark_rgba(size: usize, polished: bool) -> Vec<u8> {
-    const GREEN: [f32; 3] = [30.0, 215.0, 96.0];
-    const INK: [f32; 3] = [11.0, 14.0, 12.0];
-    let mut rgba = vec![0u8; size * size * 4];
-    // The disc keeps two pixels of margin, so its edge is never clipped.
-    let unit = (size as f32 / 2.0 - 2.0) / 62.0;
-    let origin = size as f32 / 2.0 - 64.0 * unit;
-    for y in 0..size {
-        for x in 0..size {
-            // The pixel's centre in the mark's own units.
-            let u = (x as f32 + 0.5 - origin) / unit;
-            let v = (y as f32 + 0.5 - origin) / unit;
-            let distance = ((u - 64.0).powi(2) + (v - 64.0).powi(2)).sqrt();
-            let coverage = ((62.0 - distance) * unit + 0.5).clamp(0.0, 1.0);
-            if coverage <= 0.0 {
-                continue;
-            }
-            let mut colour = if polished {
-                let rim = mix([24.0, 192.0, 85.0], [12.0, 138.0, 58.0], (v - 2.0) / 124.0);
-                let lit = (v - 8.0) / 112.0;
-                let face = if lit < 0.55 {
-                    mix([92.0, 240.0, 149.0], GREEN, lit / 0.55)
-                } else {
-                    mix(GREEN, [21.0, 182.0, 80.0], (lit - 0.55) / 0.45)
-                };
-                let on_face = ((54.4 - distance) * unit + 0.5).clamp(0.0, 1.0);
-                let mut colour = mix(rim, face, on_face);
-                // The bright edge where the face meets the rim: light at
-                // the top, shaded at the bottom.
-                let edge = (1.0 - (distance - 55.0).abs() / 0.9).clamp(0.0, 1.0);
-                let (tone, strength) = if lit < 0.5 {
-                    ([217.0, 255.0, 232.0], 1.0 - 1.3 * lit)
-                } else {
-                    ([10.0, 110.0, 46.0], 0.35 + 1.1 * (lit - 0.5))
-                };
-                colour = mix(colour, tone, edge * strength.clamp(0.0, 1.0));
-                colour
-            } else {
-                GREEN
-            };
-            let triangle = triangle_distance((u, v), (49.2, 43.5), (49.2, 84.5), (86.1, 64.0));
-            let glyph = ((5.0 - triangle) * unit + 0.5).clamp(0.0, 1.0);
-            colour = mix(colour, INK, glyph);
-            let index = (y * size + x) * 4;
-            rgba[index] = colour[0].round() as u8;
-            rgba[index + 1] = colour[1].round() as u8;
-            rgba[index + 2] = colour[2].round() as u8;
-            rgba[index + 3] = (coverage * 255.0) as u8;
+        distance_squared = distance_squared.min(dx * dx + dy * dy);
+        if (a.1 > point.1) != (b.1 > point.1)
+            && point.0 < (b.0 - a.0) * (point.1 - a.1) / (b.1 - a.1) + a.0
+        {
+            inside = !inside;
         }
     }
-    rgba
+    let distance = distance_squared.sqrt() * scale;
+    let signed = if inside { distance } else { -distance };
+    (signed + 0.5).clamp(0.0, 1.0)
+}
+
+fn rounded_rect_coverage(point: (f32, f32), scale: f32) -> f32 {
+    let qx = (point.0 - 64.0).abs() - 26.0;
+    let qy = (point.1 - 64.0).abs() - 26.0;
+    let outside = qx.max(0.0).hypot(qy.max(0.0));
+    let distance = outside + qx.max(qy).min(0.0) - 34.0;
+    (0.5 - distance * scale).clamp(0.0, 1.0)
 }
 
 pub fn greeting(locale: Locale) -> Cow<'static, str> {
@@ -388,38 +403,23 @@ mod tests {
         ]
     }
 
-    /// The icon wears the polished disc at every size, and the tray
-    /// template keeps its punched-out triangle.
+    /// App icons carry the Spoty tile and monogram. Menu-bar images use only
+    /// the monogram silhouette so the operating system can theme its colour.
     #[test]
-    fn the_icon_is_polished_at_every_size() {
+    fn the_icon_and_menu_bar_use_the_spoty_monogram_at_every_size() {
         // #given the icon at a dock size and at a tray size
         let (large, small) = (app_icon_rgba(128), app_icon_rgba(32));
 
-        // #then both have a darker rim around a lighter face
-        let rim = pixel(&large, 128, 64, 6);
-        let face = pixel(&large, 128, 64, 20);
-        assert!(
-            face[1] > rim[1],
-            "face {face:?} should be lighter than rim {rim:?}"
-        );
-        assert!(pixel(&small, 32, 16, 6)[1] > pixel(&small, 32, 16, 2)[1]);
-        // #and a lit top fading to a deeper bottom
-        let low = pixel(&large, 128, 64, 108);
-        assert!(face[1] > low[1]);
-
-        // #and both carry the dark triangle, a little right of centre
-        for (icon, size) in [(&large, 128), (&small, 32)] {
-            let centre = pixel(icon, size, size / 2 + size / 16, size / 2);
-            assert!(centre[1] < 40, "triangle missing at {size}: {centre:?}");
-        }
-
-        // #and the corners stay clear
+        // #then the tile has a transparent rounded corner and a rose monogram
         assert_eq!(pixel(&large, 128, 1, 1)[3], 0);
+        let monogram = pixel(&large, 128, 62, 50);
+        assert!(monogram[0] > monogram[1] && monogram[1] > monogram[2]);
+        assert!(pixel(&small, 32, 16, 12)[0] > pixel(&small, 32, 16, 12)[1]);
 
-        // #and the menu-bar template is the disc with the triangle cut out
+        // #and the menu-bar template is the S silhouette on transparency
         let template = tray_template_rgba(44);
-        assert_eq!(pixel(&template, 44, 24, 22)[3], 0);
-        assert_eq!(pixel(&template, 44, 8, 22), [0, 0, 0, 255]);
+        assert_eq!(pixel(&template, 44, 2, 2)[3], 0);
+        assert_eq!(pixel(&template, 44, 21, 17)[3], 255);
     }
 
     #[test]

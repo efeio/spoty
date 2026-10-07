@@ -30,9 +30,9 @@ use tokio::sync::watch;
 pub const PLAYBACK_CLIENT_ID: &str = "65b708073fc0480ea92a077233ca87bd";
 pub const PLAYBACK_REDIRECT_PORT: u16 = 8898;
 
-/// The public Web API application shared by spotify-player, ncspot, and
-/// Omarchy Spotify.
-pub const DEFAULT_WEB_CLIENT_ID: &str = "d420a117a32841c2b3474932e49fb54b";
+/// Spoty's Web API application. Keep its ID separate from Spotify's playback
+/// client identity: the latter belongs to Spotify and is required by librespot.
+pub const DEFAULT_WEB_CLIENT_ID: &str = "b36dae3e781d4a4fbc265cdaf3974ec1";
 pub const WEB_REDIRECT_PORT: u16 = 8989;
 
 pub const REDIRECT_PATH: &str = "/login";
@@ -462,10 +462,10 @@ main{{max-width:28rem;padding:2.5rem;border-radius:1.25rem;background:#181b20;bo
 
 fn success_page() -> String {
     page(
-        "Signed in to Spotifast",
+        "Signed in to Spoty",
         "You're signed in",
-        "You can close this tab and go back to Spotifast.",
-        "#1ed760",
+        "You can close this tab and go back to Spoty.",
+        "#e0798b",
     )
 }
 
@@ -473,7 +473,7 @@ fn failure_page(reason: &str) -> String {
     page(
         "Sign-in failed",
         "Sign-in didn't complete",
-        &format!("{reason}. Return to Spotifast and try again."),
+        &format!("{reason}. Return to Spoty and try again."),
         "#f5717f",
     )
 }
@@ -596,7 +596,7 @@ mod tests {
             ..token.clone()
         };
         assert!(expired.needs_refresh());
-        let dir = std::env::temp_dir().join(format!("spotifast-token-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spoty-token-{}", std::process::id()));
         let path = dir.join("token.json");
         token.save(&path).unwrap();
         assert_eq!(StoredToken::load(&path), Some(token));
@@ -607,7 +607,7 @@ mod tests {
     #[test]
     fn legacy_tokens_move_to_the_matching_session() {
         let dir = std::env::temp_dir().join(format!(
-            "spotifast-token-migration-{}-{}",
+            "spoty-token-migration-{}-{}",
             std::process::id(),
             now_secs()
         ));

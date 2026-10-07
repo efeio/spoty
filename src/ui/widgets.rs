@@ -2804,14 +2804,21 @@ pub fn search_field(
         ui.painter().rect_stroke(
             rect,
             height / 2.0,
-            Stroke::new(1.5, palette.text.gamma_multiply(0.6)),
+            Stroke::new(1.5, palette.accent.gamma_multiply(0.8)),
             egui::StrokeKind::Inside,
         );
     }
     let icon_rect =
         Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(16.0));
     Icon::Search
-        .image(palette.secondary, 16.0)
+        .image(
+            if has_focus {
+                palette.accent
+            } else {
+                palette.secondary
+            },
+            16.0,
+        )
         .paint_at(ui, icon_rect);
     let field_rect = Rect::from_min_max(
         pos2(rect.left() + 34.0, rect.top() + 1.0),
@@ -3403,7 +3410,7 @@ mod tests {
 
     fn test_app() -> App {
         let root = std::env::temp_dir().join(format!(
-            "spotifast-virtual-{}-{}",
+            "spoty-virtual-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

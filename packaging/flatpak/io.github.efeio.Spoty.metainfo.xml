@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.efeio.Spoty</id>
+  <name>Spoty</name>
+  <summary>A calm, native Spotify music app</summary>
+  <developer id="io.github.efeio">
+    <name>Spoty contributors</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      Spoty is a native desktop music app in development. It is being built
+      for quick access to a Spotify library, thoughtful playback controls,
+      and a calmer listening experience.
+    </p>
+    <p>
+      Spotify Premium is required for local playback. Spoty is independent
+      and is not affiliated with Spotify AB.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.efeio.Spoty.desktop</launchable>
+  <url type="homepage">https://github.com/efeio/spoty</url>
+  <url type="bugtracker">https://github.com/efeio/spoty/issues</url>
+  <url type="vcs-browser">https://github.com/efeio/spoty</url>
+  <branding>
+    <color type="primary" scheme_preference="light">#D7A8B5</color>
+    <color type="primary" scheme_preference="dark">#D7A8B5</color>
+  </branding>
+  <content_rating type="oars-1.1" />
+  <requires>
+    <internet>always</internet>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>

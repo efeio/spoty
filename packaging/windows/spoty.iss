@@ -1,8 +1,8 @@
 ﻿; The Windows installer, built with Inno Setup 6.3 or later from a release
 ; binary (the release workflow does this on every tag):
 ;
-;   iscc /DVersion=0.9.1 /DArch=x86_64 /DBinary=...\spotifast.exe ^
-;        /DOutputDir=dist packaging\windows\spotifast.iss
+;   iscc /DVersion=0.1.0 /DArch=x86_64 /DBinary=...\spoty.exe ^
+;        /DOutputDir=dist packaging\windows\spoty.iss
 ;
 ; Arch is x86_64 or aarch64, as in the Rust target triple, so the installer
 ; is named like the zip next to it. It needs no administrator rights: the
@@ -27,21 +27,21 @@
   #define InnoArch "x64compatible"
 #endif
 
-#define AppName "Spotifast"
-#define AppExeName "spotifast.exe"
-#define AppIdentity "Spotifast"
+#define AppName "Spoty"
+#define AppExeName "spoty.exe"
+#define AppIdentity "Spoty"
 
 [Setup]
-; Never change: this is how Windows tells an update from a new program.
-AppId={{FCED1EA0-EBF5-4C32-BA3B-A3AD724BACC3}
+; Keep this identity separate from the Spoty app this project came from.
+AppId={{F6F6D31D-7AF0-4ED2-A2FF-DC7C7AB33281}
 AppName={#AppName}
 AppVersion={#Version}
 AppVerName={#AppName} {#Version}
-AppPublisher=Carmine Paolino
-AppCopyright=© 2026 Carmine Paolino
-AppPublisherURL=https://spotifast.rocks
-AppSupportURL=https://github.com/crmne/spotifast/issues
-AppUpdatesURL=https://spotifast.rocks/download/
+AppPublisher=Spoty contributors
+AppCopyright=© 2026 Spoty contributors. Includes upstream MIT-licensed work.
+AppPublisherURL=https://github.com/efeio/spoty
+AppSupportURL=https://github.com/efeio/spoty/issues
+AppUpdatesURL=https://github.com/efeio/spoty/releases
 DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
@@ -51,8 +51,8 @@ ArchitecturesInstallIn64BitMode={#InnoArch}
 MinVersion=10.0
 LicenseFile=..\..\LICENSE
 OutputDir={#OutputDir}
-OutputBaseFilename=spotifast-v{#Version}-{#Arch}-pc-windows-msvc-setup
-SetupIconFile=spotifast.ico
+OutputBaseFilename=spoty-v{#Version}-{#Arch}-pc-windows-msvc-setup
+SetupIconFile=spoty.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -75,29 +75,29 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "{#Binary}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "spotifast-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "spoty-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Registry]
-; Spotify links (spotify:track:…) open in Spotifast. Registered for this
+; Spotify links (spotify:track:…) open in Spoty. Registered for this
 ; user only, like the program itself. The official client registers the same
 ; scheme when it is installed; whichever was set up last has the links, and
-; Settings > Apps > Default apps can hand them to the other, where Spotifast
+; Settings > Apps > Default apps can hand them to the other, where Spoty
 ; is listed through the capabilities below.
 Root: HKCU; Subkey: "Software\Classes\spotify"; ValueType: string; ValueName: ""; ValueData: "URL:Spotify link"
 Root: HKCU; Subkey: "Software\Classes\spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
 Root: HKCU; Subkey: "Software\Classes\spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
 Root: HKCU; Subkey: "Software\Classes\spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
-Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify"; ValueType: string; ValueName: ""; ValueData: "URL:Spotify link"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
-Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
-Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\Spoty.spotify"; ValueType: string; ValueName: ""; ValueData: "URL:Spotify link"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Spoty.spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Spoty.spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
+Root: HKCU; Subkey: "Software\Classes\Spoty.spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
 Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "A native Spotify client"
-Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities\URLAssociations"; ValueType: string; ValueName: "spotify"; ValueData: "Spotifast.spotify"
+Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities\URLAssociations"; ValueType: string; ValueName: "spotify"; ValueData: "Spoty.spotify"
 Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "{#AppIdentity}"; ValueData: "Software\{#AppIdentity}\Capabilities"; Flags: uninsdeletevalue
 
 [Run]

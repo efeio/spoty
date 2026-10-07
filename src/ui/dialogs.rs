@@ -35,12 +35,12 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             ui.set_width(420.0);
             match dialog {
                 Dialog::PersonalAppIntro => {
-                    theme::text(ui, gettext(locale, "Spend less time waiting for Spotify"), theme::bold(20.0), palette.text);
+                    theme::text(ui, gettext(locale, "About Spotify Development Mode"), theme::bold(20.0), palette.text);
                     ui.add_space(12.0);
                     for text in [
-                        gettext(locale, "Spotifast's default connection shares Spotify's request limit with other listeners. When it gets busy, loading music and using playback controls can take longer."),
-                        gettext(locale, "Your Premium account lets you create a free personal Spotify app. Connect it here to give supported requests your own allowance. Some pages still use the shared connection."),
-                        gettext(locale, "Setup takes a few minutes. You can also find it later in Settings under Personal Spotify app."),
+                        gettext(locale, "Spoty's Spotify integration is in Development Mode. The app owner must have Premium, and up to five Spotify accounts can be allowlisted."),
+                        gettext(locale, "A personal app uses the quota assigned to its developer account. Apps owned by the same account share that quota, so creating another app under your account will not add capacity."),
+                        gettext(locale, "Some Spotify API features are unavailable in Development Mode. You can set up a personal app later in Settings under Personal Spotify app."),
                     ] {
                         ui.add(egui::Label::new(egui::RichText::new(text).font(theme::regular(14.0)).color(palette.secondary)).wrap());
                         ui.add_space(10.0);
@@ -210,7 +210,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
                         egui::Label::new(
                             egui::RichText::new(gettext(
                                 locale,
-                                "Playback needs Spotify Premium. Free accounts can browse and search, but cannot play music through Spotifast.",
+                                "Playback needs Spotify Premium. Free accounts can browse and search, but cannot play music through Spoty.",
                             ))
                             .font(theme::regular(14.0))
                             .color(palette.secondary),

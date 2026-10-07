@@ -88,7 +88,7 @@
       packages = forAllSystems (
         pkgs:
         let
-          spotifast =
+          spoty =
             let
               toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
               rustPlatform = pkgs.makeRustPlatform {
@@ -110,14 +110,14 @@
               );
             in
             rustPlatform.buildRustPackage rec {
-              pname = "spotifast";
+              pname = "spoty";
               version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
               src = self;
 
               # The lock file contains git dependencies. fetchCargoVendor includes
               # them in the fixed-output dependency tree, unlike cargoLock alone.
               cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-                pname = "spotifast";
+                pname = "spoty";
                 version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
                 src = self;
                 hash = "sha256-vXgV/4CXzrw6WTmPnmB7DVZ0P6sC4UB1M70VDuzt2jY=";
@@ -172,31 +172,31 @@
               # The GUI dlopens its Wayland, X11 and GL libraries at run time.
               postFixup =
                 pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-                  wrapProgram $out/bin/spotifast \
+                  wrapProgram $out/bin/spoty \
                     --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
                 ''
                 + pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
-                  rcodesign sign "$out/Applications/Spotifast.app"
+                  rcodesign sign "$out/Applications/Spoty.app"
                 '';
 
               postInstall =
                 pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-                  install -Dm644 packaging/applications/spotifast.desktop \
-                    $out/share/applications/spotifast.desktop
-                  install -Dm644 packaging/icons/spotifast.svg \
-                    $out/share/icons/hicolor/scalable/apps/spotifast.svg
-                  install -Dm644 contrib/omarchy/spotifast.json.tpl \
-                    $out/share/spotifast/omarchy/spotifast.json.tpl
-                  install -Dm755 contrib/omarchy/spotifast-theme \
-                    $out/share/spotifast/omarchy/spotifast-theme
+                  install -Dm644 packaging/applications/spoty.desktop \
+                    $out/share/applications/spoty.desktop
+                  install -Dm644 packaging/icons/spoty.svg \
+                    $out/share/icons/hicolor/scalable/apps/spoty.svg
+                  install -Dm644 contrib/omarchy/spoty.json.tpl \
+                    $out/share/spoty/omarchy/spoty.json.tpl
+                  install -Dm755 contrib/omarchy/spoty-theme \
+                    $out/share/spoty/omarchy/spoty-theme
                 ''
                 + pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
-                  app="$out/Applications/Spotifast.app/Contents"
+                  app="$out/Applications/Spoty.app/Contents"
                   mkdir -p "$app/MacOS" "$app/Resources"
-                  executable=Spotifast
-                  identifier=rocks.spotifast.Spotifast
-                  cp "$out/bin/spotifast" "$app/MacOS/$executable"
-                  icnsify packaging/macos/icon-1024.png -o "$app/Resources/spotifast.icns"
+                  executable=Spoty
+                  identifier=io.github.efeio.Spoty
+                  cp "$out/bin/spoty" "$app/MacOS/$executable"
+                  icnsify packaging/macos/icon-1024.png -o "$app/Resources/spoty.icns"
                   substitute packaging/macos/Info.plist "$app/Info.plist" \
                     --replace-fail __VERSION__ "${version}" \
                     --replace-fail __BUILD__ "${pkgs.lib.head (pkgs.lib.splitString "-" version)}" \
@@ -205,20 +205,20 @@
                 '';
 
               meta = {
-                description = "Fast native Spotify client with local playback and Spotify Connect";
-                homepage = "https://spotifast.rocks";
+                description = "Native Spotify music client with local playback and Spotify Connect";
+                homepage = "https://github.com/efeio/spoty";
                 license = pkgs.lib.licenses.mit;
-                mainProgram = "spotifast";
+                mainProgram = "spoty";
               };
             };
 
         in
         {
-          default = spotifast;
-          inherit spotifast;
+          default = spoty;
+          inherit spoty;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          spotifast-app = spotifast;
+          spoty-app = spoty;
         }
       );
 
