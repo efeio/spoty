@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use egui::{Align, Frame, Layout, Margin};
+use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, vec2};
 
 use crate::api::models::PlayableItem;
 use crate::app::App;
@@ -48,11 +48,12 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         .default_size(app.settings.queue_width)
         .size_range(fit.range.clone())
         .show_separator_line(false)
-        .frame(
-            Frame::new()
-                .fill(palette.panel)
-                .inner_margin(Margin::symmetric(12, 12)),
-        );
+        .frame(Frame::new().fill(palette.window).inner_margin(Margin {
+            left: 8,
+            right: 12,
+            top: 10,
+            bottom: 8,
+        }));
     let response = panel.show(ui, |ui| {
         let window_controls = super::window_controls_reservation(
             ui.ctx(),
@@ -61,6 +62,33 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
             ui.available_width(),
         );
         ui.add_space(window_controls.queue_top);
+        let container_rect = Rect::from_min_size(
+            ui.cursor().min,
+            vec2(ui.available_width(), ui.available_height()),
+        );
+        ui.painter().rect_filled(
+            container_rect,
+            CornerRadius::same(16),
+            if palette.dark {
+                egui::Color32::from_rgba_unmultiplied(20, 24, 30, 140)
+            } else {
+                egui::Color32::from_rgba_unmultiplied(245, 247, 250, 170)
+            },
+        );
+        ui.painter().rect_stroke(
+            container_rect,
+            CornerRadius::same(16),
+            egui::Stroke::new(
+                1.0,
+                if palette.dark {
+                    egui::Color32::from_white_alpha(18)
+                } else {
+                    egui::Color32::from_black_alpha(14)
+                },
+            ),
+            egui::StrokeKind::Inside,
+        );
+        ui.add_space(6.0);
         // Measure buttons first and give the remaining width to the chips.
         // Without `shrink_left`, wrapped chips can overlap the close button.
         let tab = app.queue_tab;
