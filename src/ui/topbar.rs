@@ -171,11 +171,29 @@ fn nav_button(
     );
     if ui.is_rect_visible(rect) {
         let fill = if palette.dark {
-            egui::Color32::from_black_alpha(90)
+            if response.hovered() && enabled {
+                egui::Color32::from_white_alpha(32)
+            } else {
+                egui::Color32::from_white_alpha(16)
+            }
+        } else if response.hovered() && enabled {
+            egui::Color32::from_black_alpha(26)
         } else {
-            egui::Color32::from_black_alpha(20)
+            egui::Color32::from_black_alpha(14)
         };
         ui.painter().circle_filled(rect.center(), 16.0, fill);
+        ui.painter().circle_stroke(
+            rect.center(),
+            16.0,
+            egui::Stroke::new(
+                1.0,
+                if palette.dark {
+                    egui::Color32::from_white_alpha(20)
+                } else {
+                    egui::Color32::from_black_alpha(14)
+                },
+            ),
+        );
         let color = if !enabled {
             palette.dim
         } else if response.hovered() {

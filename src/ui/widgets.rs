@@ -2824,20 +2824,42 @@ pub fn search_field(
     let height = 34.0;
     let (rect, _) = ui.allocate_exact_size(vec2(width, height), Sense::hover());
     let has_focus = ui.memory(|memory| memory.has_focus(id));
+    let radius = CornerRadius::same(17);
+    ui.painter().add(
+        egui::epaint::Shadow {
+            offset: [0, 2],
+            blur: 10,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(if palette.dark { 45 } else { 15 }),
+        }
+        .as_shape(rect, radius),
+    );
     let fill = if has_focus {
-        palette.surface_hover
+        if palette.dark {
+            egui::Color32::from_rgba_unmultiplied(32, 38, 48, 220)
+        } else {
+            egui::Color32::from_rgba_unmultiplied(242, 245, 250, 230)
+        }
+    } else if palette.dark {
+        egui::Color32::from_rgba_unmultiplied(22, 26, 34, 180)
     } else {
-        palette.surface
+        egui::Color32::from_rgba_unmultiplied(236, 240, 246, 190)
     };
-    ui.painter().rect_filled(rect, height / 2.0, fill);
-    if has_focus {
-        ui.painter().rect_stroke(
-            rect,
-            height / 2.0,
-            Stroke::new(1.5, palette.accent.gamma_multiply(0.8)),
-            egui::StrokeKind::Inside,
-        );
-    }
+    ui.painter().rect_filled(rect, radius, fill);
+    let stroke = if has_focus {
+        Stroke::new(1.0, palette.accent.gamma_multiply(0.85))
+    } else {
+        Stroke::new(
+            1.0,
+            if palette.dark {
+                egui::Color32::from_white_alpha(20)
+            } else {
+                egui::Color32::from_black_alpha(15)
+            },
+        )
+    };
+    ui.painter()
+        .rect_stroke(rect, radius, stroke, egui::StrokeKind::Inside);
     let icon_rect =
         Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(16.0));
     Icon::Search
