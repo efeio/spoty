@@ -2233,7 +2233,14 @@ pub fn table_header(
     ui.painter().hline(
         rect.x_range().shrink(8.0),
         rect.bottom() - 0.5,
-        Stroke::new(1.0, palette.outline),
+        Stroke::new(
+            1.0,
+            if palette.dark {
+                Color32::from_white_alpha(18)
+            } else {
+                Color32::from_black_alpha(14)
+            },
+        ),
     );
     ui.add_space(6.0);
     clicked
