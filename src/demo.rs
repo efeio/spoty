@@ -3557,7 +3557,6 @@ mod tests {
         app.backend.shutdown();
     }
 
-
     /// Linux offers middle-click autoscroll as a switch that starts off and
     /// is saved; Windows always autoscrolls and macOS never does, so neither
     /// shows the row.
@@ -3602,7 +3601,6 @@ mod tests {
         assert!(app.settings.middle_click_autoscroll);
         app.backend.shutdown();
     }
-
 
     fn frame(ctx: &egui::Context, app: &mut App) {
         frame_events(ctx, app, Vec::new());

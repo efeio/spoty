@@ -1268,7 +1268,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         });
     }
 
-
     let equalizer = gettext(locale, "Equalizer");
     let equalizer_rows = [
         RowText::new(
