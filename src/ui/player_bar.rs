@@ -87,7 +87,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             ui.painter().hline(
                 rect.x_range(),
                 rect.top() + 0.5,
-                egui::Stroke::new(1.0, palette.outline),
+                egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.55)),
             );
             let width = rect.width();
             let side = (width * 0.3).clamp(200.0, 420.0);
@@ -377,13 +377,76 @@ fn eased_fill(ctx: &egui::Context, panel: Color32, tint: Option<Color32>) -> Col
     }
 }
 
+/// An icon button tailored for the player bar, with an Apple Music style subtle
+/// capsule highlight when active, a soft hover wash, and tactile press scaling.
+fn bar_button(
+    ui: &mut egui::Ui,
+    palette: &theme::Palette,
+    icon: Icon,
+    size: f32,
+    active: bool,
+    enabled: bool,
+    tooltip: &str,
+) -> egui::Response {
+    let edge = size + 12.0;
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(edge), Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(
+            egui::WidgetType::Button,
+            ui.is_enabled() && enabled,
+            tooltip,
+        )
+    });
+    if ui.is_rect_visible(rect) {
+        let is_enabled = ui.is_enabled() && enabled;
+        if active && is_enabled {
+            ui.painter().rect_filled(
+                rect.shrink(2.5),
+                egui::CornerRadius::same(6),
+                palette.accent.gamma_multiply(0.14),
+            );
+        } else if response.hovered() && is_enabled {
+            ui.painter().rect_filled(
+                rect.shrink(2.5),
+                egui::CornerRadius::same(6),
+                palette.surface_hover,
+            );
+        }
+        let tint = if !is_enabled {
+            palette.dim
+        } else if active {
+            if response.hovered() {
+                palette.accent_hover
+            } else {
+                palette.accent
+            }
+        } else if response.hovered() || response.has_focus() {
+            palette.text
+        } else {
+            palette.secondary
+        };
+        let scale = if response.is_pointer_button_down_on() && is_enabled {
+            0.92
+        } else {
+            1.0
+        };
+        theme::paint_icon(ui, icon, rect, size * scale, tint);
+    }
+    theme::focus_ring(ui, &response);
+    if tooltip.is_empty() {
+        response
+    } else {
+        response.on_hover_text(tooltip)
+    }
+}
+
 fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option<&NowPlaying>) {
     let palette = app.palette;
     let cy = region.center().y;
     let cover_rect = Rect::from_min_size(pos2(region.left() + 4.0, cy - 28.0), Vec2::splat(56.0));
 
     let Some(now) = now else {
-        super::widgets::paint_cover(ui, &palette, None, cover_rect, 6.0, Icon::Music, None);
+        super::widgets::paint_cover(ui, &palette, None, cover_rect, 8.0, Icon::Music, None);
         let text_left = cover_rect.right() + 12.0;
         let text_rect = Rect::from_min_size(
             pos2(text_left, cy - 17.0),
@@ -410,14 +473,37 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         return;
     };
 
+    let shadow_color = if palette.dark {
+        Color32::from_black_alpha(35)
+    } else {
+        Color32::from_black_alpha(20)
+    };
+    ui.painter().rect_filled(
+        cover_rect.translate(vec2(0.0, 2.0)),
+        egui::CornerRadius::same(8),
+        shadow_color,
+    );
+
     super::widgets::paint_cover(
         ui,
         &palette,
         now.art_small.as_deref().or(now.art_url.as_deref()),
         cover_rect,
-        6.0,
+        8.0,
         Icon::Music,
         Some(app.backend.art()),
+    );
+
+    let inner_stroke_color = if palette.dark {
+        Color32::from_white_alpha(16)
+    } else {
+        Color32::from_black_alpha(18)
+    };
+    ui.painter().rect_stroke(
+        cover_rect,
+        8.0,
+        egui::Stroke::new(1.0, inner_stroke_color),
+        egui::StrokeKind::Inside,
     );
     let song = app.now_playing_item();
     let drag_sense = if song.is_some() {
@@ -531,18 +617,13 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
 
     if !now.is_episode {
         let saved = app.is_saved(&now.uri).unwrap_or(false);
-        let (icon, color, tooltip) = if saved {
+        let (icon, tooltip) = if saved {
             (
                 Icon::HeartFilled,
-                palette.accent,
                 gettext(app.locale, "Remove from Liked Songs"),
             )
         } else {
-            (
-                Icon::Heart,
-                palette.secondary,
-                gettext(app.locale, "Save to Liked Songs"),
-            )
+            (Icon::Heart, gettext(app.locale, "Save to Liked Songs"))
         };
         // Sit the heart just past the actual text, not at the region's far
         // edge, so it stays visually attached to the title.
@@ -564,7 +645,7 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
                 .max_rect(heart_rect)
                 .layout(Layout::centered_and_justified(egui::Direction::LeftToRight)),
         );
-        if theme::icon_button(&mut heart_ui, icon, 17.0, color, palette.text, &tooltip).clicked() {
+        if bar_button(&mut heart_ui, &palette, icon, 17.0, saved, true, &tooltip).clicked() {
             app.actions.push(Action::ToggleSaved(now.uri.clone()));
         }
     }
@@ -587,11 +668,6 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
     let loading = now.is_some_and(|now| now.loading);
     let shuffle = now.map_or_else(|| app.playing_context_shuffle(), |now| now.shuffle);
     let repeat = now.map(|now| now.repeat).unwrap_or_default();
-    let dim = if enabled {
-        palette.secondary
-    } else {
-        palette.dim
-    };
 
     // Button widths: icon buttons occupy icon size + 12; the disc is 36.
     let widths = [29.0, 30.0, 36.0, 30.0, 29.0];
@@ -611,18 +687,14 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
         )
     };
 
-    let shuffle_color = if shuffle { palette.accent } else { dim };
     let mut cell = centered(ui, slot(widths[0]));
-    let shuffle_button = theme::icon_button(
+    let shuffle_button = bar_button(
         &mut cell,
+        &palette,
         Icon::Shuffle,
         17.0,
-        shuffle_color,
-        if shuffle {
-            palette.accent_hover
-        } else {
-            palette.text
-        },
+        shuffle,
+        enabled,
         &gettext(app.locale, "Shuffle"),
     );
     shuffle_button.widget_info(|| {
@@ -638,12 +710,13 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
     }
 
     let mut cell = centered(ui, slot(widths[1]));
-    if theme::icon_button(
+    if bar_button(
         &mut cell,
+        &palette,
         Icon::SkipBackFilled,
         18.0,
-        dim,
-        palette.text,
+        false,
+        enabled,
         &gettext(app.locale, "Previous"),
     )
     .clicked()
@@ -652,6 +725,11 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
     }
 
     let disc = slot(widths[2]);
+    ui.painter().circle_filled(
+        disc.center() + vec2(0.0, 1.5),
+        18.0,
+        Color32::from_black_alpha(if palette.dark { 40 } else { 20 }),
+    );
     if loading || app.any_play_pending() {
         ui.painter()
             .circle_filled(disc.center(), 18.0, palette.accent);
@@ -684,12 +762,13 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
     }
 
     let mut cell = centered(ui, slot(widths[3]));
-    if theme::icon_button(
+    if bar_button(
         &mut cell,
+        &palette,
         Icon::SkipForwardFilled,
         18.0,
-        dim,
-        palette.text,
+        false,
+        enabled,
         &gettext(app.locale, "Next"),
     )
     .clicked()
@@ -697,30 +776,19 @@ fn transport(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>, region:
         app.actions.push(Action::Next);
     }
 
-    let (repeat_icon, repeat_color, tooltip) = match repeat {
-        RepeatMode::Off => (Icon::Repeat, dim, gettext(app.locale, "Repeat")),
-        RepeatMode::Context => (
-            Icon::Repeat,
-            palette.accent,
-            gettext(app.locale, "Repeat one"),
-        ),
-        RepeatMode::Track => (
-            Icon::Repeat1,
-            palette.accent,
-            gettext(app.locale, "Repeat off"),
-        ),
+    let (repeat_icon, tooltip) = match repeat {
+        RepeatMode::Off => (Icon::Repeat, gettext(app.locale, "Repeat")),
+        RepeatMode::Context => (Icon::Repeat, gettext(app.locale, "Repeat one")),
+        RepeatMode::Track => (Icon::Repeat1, gettext(app.locale, "Repeat off")),
     };
     let mut cell = centered(ui, slot(widths[4]));
-    if theme::icon_button(
+    if bar_button(
         &mut cell,
+        &palette,
         repeat_icon,
         17.0,
-        repeat_color,
-        if repeat == RepeatMode::Off {
-            palette.text
-        } else {
-            palette.accent_hover
-        },
+        repeat != RepeatMode::Off,
+        enabled,
         &tooltip,
     )
     .clicked()
@@ -837,12 +905,13 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
             34..=66 => Icon::Volume1,
             _ => Icon::Volume2,
         };
-        if theme::icon_button(
+        if bar_button(
             ui,
+            &palette,
             volume_icon,
             18.0,
-            palette.secondary,
-            palette.text,
+            false,
+            true,
             &if shown == 0 {
                 gettext(app.locale, "Unmute")
             } else {
@@ -867,16 +936,13 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
     }
     ui.add_space(4.0);
     let remote = now.is_some_and(|now| !now.local);
-    let devices = theme::icon_button(
+    let devices = bar_button(
         ui,
+        &palette,
         Icon::Speaker,
         18.0,
-        if remote {
-            palette.accent
-        } else {
-            palette.secondary
-        },
-        palette.text,
+        remote,
+        true,
         &gettext(app.locale, "Connect to a device"),
     );
     ui.ctx().data_mut(|data| {
@@ -886,16 +952,13 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
         app.actions.push(Action::ToggleDevicesPopup);
     }
     let queue_open = app.show_queue_panel || matches!(app.page(), Page::Queue);
-    let queue_button = theme::icon_button(
+    let queue_button = bar_button(
         ui,
+        &palette,
         Icon::ListVideo,
         18.0,
-        if queue_open {
-            palette.accent
-        } else {
-            palette.secondary
-        },
-        palette.text,
+        queue_open,
+        true,
         &gettext(app.locale, "Queue"),
     );
     if queue_button.clicked() {
@@ -912,16 +975,13 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
                 .collect(),
         });
     }
-    if theme::icon_button(
+    if bar_button(
         ui,
+        &palette,
         Icon::Mic,
         18.0,
-        if app.show_lyrics_panel {
-            palette.accent
-        } else {
-            palette.secondary
-        },
-        palette.text,
+        app.show_lyrics_panel,
+        true,
         &gettext(app.locale, "Lyrics"),
     )
     .clicked()

@@ -847,43 +847,6 @@ fn nav_row(
     response
 }
 
-/// A compact, rose-accented filter for the library's four content types.
-fn library_filter_button(
-    ui: &mut egui::Ui,
-    palette: &Palette,
-    label: &str,
-    active: bool,
-) -> egui::Response {
-    let color = if active {
-        palette.accent
-    } else {
-        palette.secondary
-    };
-    let galley = crate::bidi::layout_line(ui.painter(), label, theme::medium(12.5), color);
-    let padding = vec2(4.0, 5.0);
-    let size = galley.size() + padding * 2.0;
-    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
-    response.widget_info(|| {
-        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, label)
-    });
-    if ui.is_rect_visible(rect) {
-        let fill = if active {
-            palette
-                .accent
-                .gamma_multiply(if palette.dark { 0.16 } else { 0.1 })
-        } else if response.hovered() {
-            palette.surface_hover
-        } else {
-            egui::Color32::TRANSPARENT
-        };
-        ui.painter().rect_filled(rect, rect.height() / 2.0, fill);
-        let pos = rect.center() - galley.size() / 2.0;
-        ui.painter().galley(pos, galley, color);
-    }
-    theme::focus_ring(ui, &response);
-    response
-}
-
 fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     let palette = app.palette;
     let page = app.page().clone();
@@ -1018,14 +981,14 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     ui.add_space(6.0);
 
     ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(2.0, 6.0);
+        ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
         for (value, label) in [
             (Filter::Playlists, gettext(locale, "Playlists")),
             (Filter::Albums, gettext(locale, "Albums")),
             (Filter::Artists, gettext(locale, "Artists")),
             (Filter::Podcasts, gettext(locale, "Podcasts")),
         ] {
-            if library_filter_button(ui, &palette, &label, filter == value).clicked() {
+            if theme::soft_button(ui, &palette, None, &label, filter == value).clicked() {
                 filter = value;
             }
         }

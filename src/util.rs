@@ -412,14 +412,14 @@ mod tests {
 
         // #then the tile has a transparent rounded corner and a rose monogram
         assert_eq!(pixel(&large, 128, 1, 1)[3], 0);
-        let monogram = pixel(&large, 128, 62, 50);
-        assert!(monogram[0] > monogram[1] && monogram[1] > monogram[2]);
+        let monogram = pixel(&large, 128, 66, 45);
+        assert!(monogram[0] > monogram[2] && monogram[2] > monogram[1]);
         assert!(pixel(&small, 32, 16, 12)[0] > pixel(&small, 32, 16, 12)[1]);
 
         // #and the menu-bar template is the S silhouette on transparency
         let template = tray_template_rgba(44);
         assert_eq!(pixel(&template, 44, 2, 2)[3], 0);
-        assert_eq!(pixel(&template, 44, 21, 17)[3], 255);
+        assert_eq!(pixel(&template, 44, 20, 15)[3], 255);
     }
 
     #[test]

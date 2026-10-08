@@ -93,9 +93,6 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                     const COVER_SIZE: f32 = 52.0;
                     let (rect, response) =
                         ui.allocate_exact_size(vec2(232.0, 64.0), Sense::click());
-                    response.widget_info(|| {
-                        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), name)
-                    });
                     let hovered = response.hovered();
                     let mut play_clicked = false;
                     if ui.is_rect_visible(rect) {

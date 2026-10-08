@@ -2668,22 +2668,47 @@ pub fn thin_slider(
             || response.has_focus()
             || response.dragged()
             || dragging_value.is_some();
-        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), 4.0));
+        let bar_height = if active { 4.5 } else { 3.5 };
+        let bar = Rect::from_center_size(rect.center(), vec2(rect.width(), bar_height));
         let track_color = if palette.dark {
-            Color32::from_white_alpha(50)
+            Color32::from_white_alpha(35)
         } else {
-            Color32::from_black_alpha(40)
+            Color32::from_black_alpha(28)
         };
-        ui.painter().rect_filled(bar, 2.0, track_color);
+        let corner = CornerRadius::same((bar_height / 2.0).round() as u8);
+        ui.painter().rect_filled(bar, corner, track_color);
         let filled = Rect::from_min_max(
             bar.min,
             pos2(bar.left() + bar.width() * shown.clamp(0.0, 1.0), bar.max.y),
         );
-        let fill = if active { palette.accent } else { palette.text };
-        ui.painter().rect_filled(filled, 2.0, fill);
+        let fill = if active {
+            palette.accent
+        } else {
+            palette.text.gamma_multiply(0.85)
+        };
+        ui.painter().rect_filled(filled, corner, fill);
         if active {
+            let knob_pos = pos2(filled.right(), bar.center().y);
+            let knob_radius = 5.5;
+            ui.painter().circle_filled(
+                knob_pos + vec2(0.0, 1.0),
+                knob_radius + 0.5,
+                Color32::from_black_alpha(if palette.dark { 80 } else { 40 }),
+            );
             ui.painter()
-                .circle_filled(pos2(filled.right(), bar.center().y), 6.0, palette.text);
+                .circle_filled(knob_pos, knob_radius, palette.text);
+            ui.painter().circle_stroke(
+                knob_pos,
+                knob_radius,
+                egui::Stroke::new(
+                    0.5,
+                    if palette.dark {
+                        Color32::from_black_alpha(40)
+                    } else {
+                        Color32::from_black_alpha(20)
+                    },
+                ),
+            );
         }
     }
     event
