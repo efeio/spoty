@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use egui::{Align, Layout, Rect, Sense, Vec2, pos2, vec2};
+use egui::{Align, Color32, Layout, Rect, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::{Album, Image, PlayableItem, Playlist, pick_image};
 use crate::app::App;
@@ -178,6 +178,73 @@ pub struct Actions<'a> {
     pub save_radio: Option<String>,
 }
 
+fn action_glass_button(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    icon: Icon,
+    color: Color32,
+    hover: Color32,
+    active: bool,
+    tooltip: &str,
+) -> egui::Response {
+    let edge = 38.0;
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(edge), Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), tooltip)
+    });
+    if ui.is_rect_visible(rect) {
+        let hovered = response.hovered() || response.has_focus();
+        let fill = if active {
+            if palette.dark {
+                Color32::from_white_alpha(32)
+            } else {
+                Color32::from_black_alpha(22)
+            }
+        } else if hovered {
+            if palette.dark {
+                Color32::from_white_alpha(22)
+            } else {
+                Color32::from_black_alpha(16)
+            }
+        } else if palette.dark {
+            Color32::from_white_alpha(10)
+        } else {
+            Color32::from_black_alpha(8)
+        };
+        let stroke_color = if active {
+            palette.accent
+        } else if hovered {
+            if palette.dark {
+                Color32::from_white_alpha(28)
+            } else {
+                Color32::from_black_alpha(20)
+            }
+        } else if palette.dark {
+            Color32::from_white_alpha(16)
+        } else {
+            Color32::from_black_alpha(12)
+        };
+        let radius = edge / 2.0;
+        ui.painter().circle_filled(rect.center(), radius, fill);
+        ui.painter()
+            .circle_stroke(rect.center(), radius, egui::Stroke::new(1.0, stroke_color));
+        let icon_size = 20.0;
+        let tint = if hovered { hover } else { color };
+        let scale = if response.is_pointer_button_down_on() {
+            0.92
+        } else {
+            1.0
+        };
+        theme::paint_icon(ui, icon, rect, icon_size * scale, tint);
+    }
+    theme::focus_ring(ui, &response);
+    if tooltip.is_empty() {
+        response
+    } else {
+        response.on_hover_text(tooltip)
+    }
+}
+
 /// The big play button and its neighbours; returns the filter text if a
 /// filter field was shown.
 pub fn actions_row(
@@ -267,16 +334,17 @@ pub fn actions_row(
                 }
             }
             let shuffle = app.playing_context_shuffle();
-            if theme::icon_button(
+            if action_glass_button(
                 ui,
+                &palette,
                 Icon::Shuffle,
-                26.0,
                 if shuffle {
                     palette.accent
                 } else {
                     palette.secondary
                 },
                 palette.text,
+                shuffle,
                 &if shuffle {
                     gettext(locale, "Shuffle off")
                 } else {
@@ -302,17 +370,20 @@ pub fn actions_row(
                     palette.secondary,
                 )
             };
-            if theme::icon_button(ui, icon, 26.0, color, palette.text, tooltip).clicked() {
+            if action_glass_button(ui, &palette, icon, color, palette.text, *saved, tooltip)
+                .clicked()
+            {
                 app.actions.push(Action::ToggleSaved(uri.clone()));
             }
         }
         if let Some(seed) = &actions.save_radio
-            && theme::icon_button(
+            && action_glass_button(
                 ui,
+                &palette,
                 Icon::CirclePlus,
-                26.0,
                 palette.secondary,
                 palette.text,
+                false,
                 &gettext(locale, "Save as playlist"),
             )
             .clicked()
@@ -320,12 +391,13 @@ pub fn actions_row(
             app.actions.push(Action::SaveRadio(seed.clone()));
         }
         if let Some(uri) = &actions.play_uri {
-            let more = theme::icon_button(
+            let more = action_glass_button(
                 ui,
+                &palette,
                 Icon::Ellipsis,
-                26.0,
                 palette.secondary,
                 palette.text,
+                false,
                 &gettext(locale, "More"),
             );
             egui::Popup::menu(&more)
