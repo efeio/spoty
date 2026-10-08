@@ -798,28 +798,23 @@ fn nav_row(
     label: &str,
     active: bool,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
     if ui.is_rect_visible(rect) {
         if active {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(theme::RADIUS),
+                CornerRadius::same(7),
                 palette
                     .accent
-                    .gamma_multiply(if palette.dark { 0.16 } else { 0.1 }),
-            );
-            ui.painter().rect_filled(
-                Rect::from_min_max(rect.left_top(), pos2(rect.left() + 3.0, rect.bottom())),
-                CornerRadius::same(2),
-                palette.accent,
+                    .gamma_multiply(if palette.dark { 0.18 } else { 0.12 }),
             );
         } else if response.hovered() {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(theme::RADIUS),
+                CornerRadius::same(7),
                 palette
                     .surface_hover
-                    .gamma_multiply(if palette.dark { 0.6 } else { 0.85 }),
+                    .gamma_multiply(if palette.dark { 0.5 } else { 0.75 }),
             );
         }
         let color = if active {
@@ -830,13 +825,13 @@ fn nav_row(
             palette.secondary
         };
         let icon_rect =
-            Rect::from_center_size(pos2(rect.left() + 22.0, rect.center().y), Vec2::splat(22.0));
-        icon.image(color, 22.0).paint_at(ui, icon_rect);
+            Rect::from_center_size(pos2(rect.left() + 20.0, rect.center().y), Vec2::splat(18.0));
+        icon.image(color, 18.0).paint_at(ui, icon_rect);
         ui.painter().text(
-            pos2(rect.left() + 46.0, rect.center().y),
+            pos2(rect.left() + 42.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
             label,
-            theme::bold(15.0),
+            theme::semibold(13.5),
             color,
         );
     }
@@ -878,7 +873,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     ui.painter().hline(
         ui.max_rect().x_range().shrink(4.0),
         ui.cursor().top(),
-        egui::Stroke::new(1.0, palette.outline),
+        egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.45)),
     );
     ui.add_space(10.0);
 
@@ -1336,24 +1331,31 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 let mut cover_took_click = false;
                 if ui.is_rect_visible(rect) {
                     if active {
-                        ui.painter()
-                            .rect_filled(rect, CornerRadius::same(6), palette.surface);
+                        ui.painter().rect_filled(
+                            rect,
+                            CornerRadius::same(7),
+                            if palette.dark {
+                                palette.accent.gamma_multiply(0.14)
+                            } else {
+                                palette.accent.gamma_multiply(0.10)
+                            },
+                        );
                     } else if response.hovered() {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(6),
-                            palette.surface_hover.gamma_multiply(0.6),
+                            CornerRadius::same(7),
+                            palette.surface_hover.gamma_multiply(0.55),
                         );
                     }
                     if drop_hover {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(6),
+                            CornerRadius::same(7),
                             palette.accent.gamma_multiply(0.18),
                         );
                         ui.painter().rect_stroke(
                             rect,
-                            CornerRadius::same(6),
+                            CornerRadius::same(7),
                             egui::Stroke::new(1.5, palette.accent),
                             egui::StrokeKind::Inside,
                         );
@@ -1440,15 +1442,22 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             ),
                             Vec2::splat(44.0),
                         );
+                        if !entry.round {
+                            ui.painter().rect_filled(
+                                cover_rect.translate(vec2(0.0, 1.5)),
+                                CornerRadius::same(7),
+                                egui::Color32::from_black_alpha(if palette.dark { 30 } else { 15 }),
+                            );
+                        }
                         if entry.liked {
-                            liked_cover(ui, cover_rect, 6.0);
+                            liked_cover(ui, cover_rect, 7.0);
                         } else {
                             super::widgets::paint_cover(
                                 ui,
                                 &palette,
                                 entry.image.as_deref(),
                                 cover_rect,
-                                if entry.round { 22.0 } else { 6.0 },
+                                if entry.round { 22.0 } else { 7.0 },
                                 if entry.round { Icon::User } else { Icon::Music },
                                 Some(app.backend.art()),
                             );
