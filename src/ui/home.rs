@@ -99,25 +99,39 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                         if hovered || response.has_focus() {
                             ui.painter().rect_filled(
                                 rect,
-                                CornerRadius::same(theme::RADIUS),
-                                palette.surface_hover.gamma_multiply(if palette.dark {
-                                    0.72
+                                CornerRadius::same(12),
+                                if palette.dark {
+                                    egui::Color32::from_white_alpha(18)
                                 } else {
-                                    0.86
-                                }),
+                                    egui::Color32::from_black_alpha(14)
+                                },
+                            );
+                            ui.painter().rect_stroke(
+                                rect,
+                                CornerRadius::same(12),
+                                egui::Stroke::new(
+                                    1.0,
+                                    if palette.dark {
+                                        egui::Color32::from_white_alpha(26)
+                                    } else {
+                                        egui::Color32::from_black_alpha(18)
+                                    },
+                                ),
+                                egui::StrokeKind::Inside,
                             );
                         }
                         let cover_rect =
                             Rect::from_min_size(rect.min + vec2(6.0, 6.0), Vec2::splat(COVER_SIZE));
+                        widgets::paint_shadow(ui, &palette, cover_rect, 8.0);
                         if *liked {
-                            super::sidebar::liked_cover(ui, cover_rect, 6.0);
+                            super::sidebar::liked_cover(ui, cover_rect, 8.0);
                         } else {
                             widgets::paint_cover(
                                 ui,
                                 &palette,
                                 image.as_deref(),
                                 cover_rect,
-                                6.0,
+                                8.0,
                                 Icon::Music,
                                 Some(app.backend.art()),
                             );
@@ -411,27 +425,49 @@ fn featured_recent_track(ui: &mut egui::Ui, app: &mut App, track: &crate::api::m
         let hovered = response.hovered();
         let playing_here =
             app.now_playing().is_some_and(|now| now.uri == track.uri) && app.believed_playing();
+        ui.painter().add(
+            egui::epaint::Shadow {
+                offset: [0, 4],
+                blur: 16,
+                spread: 0,
+                color: egui::Color32::from_black_alpha(if palette.dark { 55 } else { 18 }),
+            }
+            .as_shape(rect, CornerRadius::same(14)),
+        );
         let fill = if hovered {
-            palette.surface_hover
+            if palette.dark {
+                egui::Color32::from_rgba_unmultiplied(32, 38, 48, 200)
+            } else {
+                egui::Color32::from_rgba_unmultiplied(240, 244, 250, 220)
+            }
+        } else if palette.dark {
+            egui::Color32::from_rgba_unmultiplied(22, 26, 34, 150)
         } else {
-            palette.panel
+            egui::Color32::from_rgba_unmultiplied(245, 247, 252, 170)
         };
-        ui.painter().rect_filled(rect, CornerRadius::same(12), fill);
+        ui.painter().rect_filled(rect, CornerRadius::same(14), fill);
         ui.painter().rect_stroke(
             rect,
-            CornerRadius::same(12),
-            egui::Stroke::new(1.0, palette.outline),
+            CornerRadius::same(14),
+            egui::Stroke::new(
+                1.0,
+                if palette.dark {
+                    egui::Color32::from_white_alpha(if hovered { 36 } else { 20 })
+                } else {
+                    egui::Color32::from_black_alpha(if hovered { 24 } else { 14 })
+                },
+            ),
             egui::StrokeKind::Inside,
         );
 
         let cover_rect = Rect::from_min_size(rect.min + vec2(18.0, 18.0), Vec2::splat(COVER));
-        widgets::paint_shadow(ui, &palette, cover_rect, 8.0);
+        widgets::paint_shadow(ui, &palette, cover_rect, 10.0);
         widgets::paint_cover(
             ui,
             &palette,
             track.image(640),
             cover_rect,
-            8.0,
+            10.0,
             Icon::Music,
             Some(app.backend.art()),
         );

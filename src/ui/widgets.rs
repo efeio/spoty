@@ -183,14 +183,11 @@ fn paint_cover_texture(
 
 /// A soft drop shadow under a cover or card.
 pub fn paint_shadow(ui: &Ui, palette: &Palette, rect: Rect, radius: f32) {
-    if !palette.dark {
-        return;
-    }
     let shadow = egui::epaint::Shadow {
-        offset: [0, 10],
-        blur: 28,
+        offset: [0, if palette.dark { 6 } else { 4 }],
+        blur: if palette.dark { 20 } else { 12 },
         spread: 0,
-        color: Color32::from_black_alpha(120),
+        color: egui::Color32::from_black_alpha(if palette.dark { 90 } else { 22 }),
     };
     ui.painter()
         .add(shadow.as_shape(rect, CornerRadius::same(radius as u8)));
@@ -2370,14 +2367,29 @@ pub fn card(
         if hovered {
             ui.painter().rect_filled(
                 rect,
-                CornerRadius::same(theme::RADIUS),
-                palette
-                    .surface_hover
-                    .gamma_multiply(if palette.dark { 0.8 } else { 1.0 }),
+                CornerRadius::same(14),
+                if palette.dark {
+                    egui::Color32::from_white_alpha(18)
+                } else {
+                    egui::Color32::from_black_alpha(14)
+                },
+            );
+            ui.painter().rect_stroke(
+                rect,
+                CornerRadius::same(14),
+                egui::Stroke::new(
+                    1.0,
+                    if palette.dark {
+                        egui::Color32::from_white_alpha(28)
+                    } else {
+                        egui::Color32::from_black_alpha(20)
+                    },
+                ),
+                egui::StrokeKind::Inside,
             );
         }
         let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
-        let radius = if circular { image_size / 2.0 } else { 6.0 };
+        let radius = if circular { image_size / 2.0 } else { 10.0 };
         paint_shadow(ui, &palette, image_rect, radius);
         paint_cover(
             ui,
