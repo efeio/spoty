@@ -2474,7 +2474,86 @@ pub fn card(
     }
 }
 
-/// A horizontal shelf of cards with a title.
+/// A circular navigation arrow for scrolling shelves.
+pub fn shelf_nav_button(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    icon: Icon,
+    enabled: bool,
+    tooltip: &str,
+) -> egui::Response {
+    let size = 26.0;
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::splat(size),
+        if enabled {
+            Sense::click()
+        } else {
+            Sense::hover()
+        },
+    );
+    if ui.is_rect_visible(rect) {
+        let hovered = response.hovered() && enabled;
+        let bg = if hovered {
+            if palette.dark {
+                egui::Color32::from_white_alpha(36)
+            } else {
+                egui::Color32::from_black_alpha(24)
+            }
+        } else if palette.dark {
+            egui::Color32::from_white_alpha(16)
+        } else {
+            egui::Color32::from_black_alpha(12)
+        };
+        let stroke = if hovered {
+            egui::Stroke::new(
+                1.0,
+                if palette.dark {
+                    egui::Color32::from_white_alpha(42)
+                } else {
+                    egui::Color32::from_black_alpha(32)
+                },
+            )
+        } else {
+            egui::Stroke::new(
+                1.0,
+                if palette.dark {
+                    egui::Color32::from_white_alpha(20)
+                } else {
+                    egui::Color32::from_black_alpha(16)
+                },
+            )
+        };
+        ui.painter().circle(rect.center(), size / 2.0, bg, stroke);
+        let icon_tint = if enabled {
+            if hovered {
+                palette.text
+            } else {
+                palette.text.gamma_multiply(0.85)
+            }
+        } else {
+            palette.dim.gamma_multiply(0.4)
+        };
+        let icon_scale = if response.is_pointer_button_down_on() && enabled {
+            0.9
+        } else {
+            1.0
+        };
+        theme::paint_icon(
+            ui,
+            icon,
+            egui::Rect::from_center_size(rect.center(), Vec2::splat(12.0 * icon_scale)),
+            12.0 * icon_scale,
+            icon_tint,
+        );
+    }
+    if enabled && !tooltip.is_empty() {
+        response.on_hover_text(tooltip)
+    } else {
+        response
+    }
+}
+
+/// A horizontal shelf of cards with a title and Spotify-style navigation arrows.
 pub fn shelf(
     ui: &mut Ui,
     palette: &Palette,
@@ -2483,11 +2562,78 @@ pub fn shelf(
     add_contents: impl FnOnce(&mut Ui),
 ) {
     ui.add_space(8.0);
-    theme::section_title(ui, palette, title);
+    let scroll_id = ui.make_persistent_id(id);
+    let target_id = scroll_id.with("shelf_target_x");
+    let metrics_id = scroll_id.with("shelf_metrics");
+
+    let (content_w, view_w) = ui
+        .ctx()
+        .data(|d| d.get_temp::<(f32, f32)>(metrics_id))
+        .unwrap_or((0.0, 0.0));
+    let max_scroll = (content_w - view_w).max(0.0);
+
+    let mut state = egui::scroll_area::State::load(ui.ctx(), scroll_id).unwrap_or_default();
+
+    if ui.input(|i| i.smooth_scroll_delta.x.abs() > 0.0) {
+        ui.ctx().data_mut(|d| d.remove_temp::<f32>(target_id));
+    }
+
+    if let Some(target) = ui.ctx().data(|d| d.get_temp::<f32>(target_id)) {
+        let current = state.offset.x;
+        let dt = ui.ctx().input(|i| i.stable_dt).clamp(0.001, 0.05);
+        let factor = 1.0 - (-18.0 * dt).exp();
+        let diff = target - current;
+        if diff.abs() <= 1.0 {
+            state.offset.x = target;
+            ui.ctx().data_mut(|d| d.remove_temp::<f32>(target_id));
+        } else {
+            state.offset.x = current + diff * factor;
+            ui.ctx().request_repaint();
+        }
+        state.store(ui.ctx(), scroll_id);
+    }
+
+    let current_x = state.offset.x;
+    let can_scroll_left = current_x > 2.0;
+    let can_scroll_right = max_scroll > 5.0 && current_x < max_scroll - 2.0;
+    let show_nav = max_scroll > 5.0;
+
+    ui.horizontal(|ui| {
+        theme::section_title(ui, palette, title);
+        if show_nav {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.add_space(4.0);
+                let step = (view_w * 0.75).max(240.0);
+                if shelf_nav_button(ui, palette, Icon::ChevronRight, can_scroll_right, "").clicked()
+                {
+                    let target = ui
+                        .ctx()
+                        .data(|d| d.get_temp::<f32>(target_id))
+                        .unwrap_or(current_x);
+                    let next = (target + step).min(max_scroll);
+                    ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
+                    ui.ctx().request_repaint();
+                }
+                ui.add_space(4.0);
+                if shelf_nav_button(ui, palette, Icon::ChevronLeft, can_scroll_left, "").clicked() {
+                    let target = ui
+                        .ctx()
+                        .data(|d| d.get_temp::<f32>(target_id))
+                        .unwrap_or(current_x);
+                    let next = (target - step).max(0.0);
+                    ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
+                    ui.ctx().request_repaint();
+                }
+            });
+        }
+    });
+
     ui.add_space(4.0);
-    crate::autoscroll::show(
+    let out = crate::autoscroll::show(
         ui,
-        egui::ScrollArea::horizontal().id_salt(id),
+        egui::ScrollArea::horizontal()
+            .id_salt(id)
+            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden),
         egui::Vec2b::new(true, false),
         |ui| {
             ui.horizontal(|ui| {
@@ -2496,6 +2642,10 @@ pub fn shelf(
             });
         },
     );
+
+    ui.ctx().data_mut(|d| {
+        d.insert_temp(metrics_id, (out.content_size.x, out.inner_rect.width()));
+    });
     ui.add_space(12.0);
 }
 

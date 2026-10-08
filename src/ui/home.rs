@@ -72,155 +72,147 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
             });
         }
     }
-    theme::section_title(ui, &palette, &gettext(app.locale, "Your shortcuts"));
-    ui.add_space(6.0);
-    crate::autoscroll::show(
+    widgets::shelf(
         ui,
-        egui::ScrollArea::horizontal().id_salt("home-quick-access"),
-        egui::Vec2b::new(true, false),
+        &palette,
+        "home-quick-access",
+        &gettext(app.locale, "Your shortcuts"),
         |ui| {
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing.x = 10.0;
-                for Tile {
-                    image,
-                    name,
-                    page,
-                    uri,
-                    liked,
-                    owned_playlist,
-                } in &tiles
-                {
-                    const COVER_SIZE: f32 = 52.0;
-                    let (rect, response) =
-                        ui.allocate_exact_size(vec2(232.0, 64.0), Sense::click());
-                    let hovered = response.hovered();
-                    let mut play_clicked = false;
-                    if ui.is_rect_visible(rect) {
-                        if hovered || response.has_focus() {
-                            ui.painter().rect_filled(
-                                rect,
-                                CornerRadius::same(12),
+            for Tile {
+                image,
+                name,
+                page,
+                uri,
+                liked,
+                owned_playlist,
+            } in &tiles
+            {
+                const COVER_SIZE: f32 = 52.0;
+                let (rect, response) = ui.allocate_exact_size(vec2(232.0, 64.0), Sense::click());
+                let hovered = response.hovered();
+                let mut play_clicked = false;
+                if ui.is_rect_visible(rect) {
+                    if hovered || response.has_focus() {
+                        ui.painter().rect_filled(
+                            rect,
+                            CornerRadius::same(12),
+                            if palette.dark {
+                                egui::Color32::from_white_alpha(18)
+                            } else {
+                                egui::Color32::from_black_alpha(14)
+                            },
+                        );
+                        ui.painter().rect_stroke(
+                            rect,
+                            CornerRadius::same(12),
+                            egui::Stroke::new(
+                                1.0,
                                 if palette.dark {
-                                    egui::Color32::from_white_alpha(18)
+                                    egui::Color32::from_white_alpha(26)
                                 } else {
-                                    egui::Color32::from_black_alpha(14)
+                                    egui::Color32::from_black_alpha(18)
                                 },
-                            );
-                            ui.painter().rect_stroke(
-                                rect,
-                                CornerRadius::same(12),
-                                egui::Stroke::new(
-                                    1.0,
-                                    if palette.dark {
-                                        egui::Color32::from_white_alpha(26)
-                                    } else {
-                                        egui::Color32::from_black_alpha(18)
-                                    },
-                                ),
-                                egui::StrokeKind::Inside,
-                            );
-                        }
-                        let cover_rect =
-                            Rect::from_min_size(rect.min + vec2(6.0, 6.0), Vec2::splat(COVER_SIZE));
-                        widgets::paint_shadow(ui, &palette, cover_rect, 8.0);
-                        if *liked {
-                            super::sidebar::liked_cover(ui, cover_rect, 8.0);
-                        } else {
-                            widgets::paint_cover(
-                                ui,
-                                &palette,
-                                image.as_deref(),
-                                cover_rect,
-                                8.0,
-                                Icon::Music,
-                                Some(app.backend.art()),
-                            );
-                        }
-                        let play_room = if (hovered || response.has_focus()) && uri.is_some() {
-                            42.0
-                        } else {
-                            8.0
-                        };
-                        let text_rect = Rect::from_min_max(
-                            pos2(cover_rect.right() + 10.0, rect.top()),
-                            pos2(rect.right() - play_room, rect.bottom()),
+                            ),
+                            egui::StrokeKind::Inside,
                         );
-                        crate::bidi::paint_line(
-                            &ui.painter().with_clip_rect(text_rect),
-                            text_rect.left(),
-                            text_rect.right(),
-                            rect.center().y,
-                            name,
-                            theme::medium(14.0),
-                            palette.text,
+                    }
+                    let cover_rect =
+                        Rect::from_min_size(rect.min + vec2(6.0, 6.0), Vec2::splat(COVER_SIZE));
+                    widgets::paint_shadow(ui, &palette, cover_rect, 8.0);
+                    if *liked {
+                        super::sidebar::liked_cover(ui, cover_rect, 8.0);
+                    } else {
+                        widgets::paint_cover(
+                            ui,
+                            &palette,
+                            image.as_deref(),
+                            cover_rect,
+                            8.0,
+                            Icon::Music,
+                            Some(app.backend.art()),
                         );
-                        if (hovered || response.has_focus())
-                            && let Some(uri) = uri
-                        {
-                            let playing_here = app.playing_context_uri().as_deref()
-                                == Some(uri.as_str())
-                                && app.believed_playing();
-                            let button_rect = Rect::from_center_size(
-                                pos2(rect.right() - 22.0, rect.center().y),
-                                Vec2::splat(34.0),
-                            );
-                            let mut button_ui =
-                                ui.new_child(egui::UiBuilder::new().max_rect(button_rect).layout(
-                                    egui::Layout::centered_and_justified(
-                                        egui::Direction::LeftToRight,
-                                    ),
-                                ));
-                            play_clicked = theme::circle_button(
-                                &mut button_ui,
-                                if playing_here {
-                                    Icon::PauseFilled
-                                } else {
-                                    Icon::PlayFilled
-                                },
-                                34.0,
-                                palette.accent,
-                                palette.accent_hover,
-                                palette.on_accent,
-                                &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
-                            )
-                            .clicked();
-                            if play_clicked {
-                                if playing_here {
-                                    app.actions.push(Action::TogglePlay);
-                                } else {
-                                    app.actions.push(Action::PlayContext {
-                                        uri: uri.clone(),
-                                        offset_uri: None,
-                                        offset_index: None,
-                                    });
-                                }
+                    }
+                    let play_room = if (hovered || response.has_focus()) && uri.is_some() {
+                        42.0
+                    } else {
+                        8.0
+                    };
+                    let text_rect = Rect::from_min_max(
+                        pos2(cover_rect.right() + 10.0, rect.top()),
+                        pos2(rect.right() - play_room, rect.bottom()),
+                    );
+                    crate::bidi::paint_line(
+                        &ui.painter().with_clip_rect(text_rect),
+                        text_rect.left(),
+                        text_rect.right(),
+                        rect.center().y,
+                        name,
+                        theme::medium(14.0),
+                        palette.text,
+                    );
+                    if (hovered || response.has_focus())
+                        && let Some(uri) = uri
+                    {
+                        let playing_here = app.playing_context_uri().as_deref()
+                            == Some(uri.as_str())
+                            && app.believed_playing();
+                        let button_rect = Rect::from_center_size(
+                            pos2(rect.right() - 22.0, rect.center().y),
+                            Vec2::splat(34.0),
+                        );
+                        let mut button_ui =
+                            ui.new_child(egui::UiBuilder::new().max_rect(button_rect).layout(
+                                egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                            ));
+                        play_clicked = theme::circle_button(
+                            &mut button_ui,
+                            if playing_here {
+                                Icon::PauseFilled
+                            } else {
+                                Icon::PlayFilled
+                            },
+                            34.0,
+                            palette.accent,
+                            palette.accent_hover,
+                            palette.on_accent,
+                            &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
+                        )
+                        .clicked();
+                        if play_clicked {
+                            if playing_here {
+                                app.actions.push(Action::TogglePlay);
+                            } else {
+                                app.actions.push(Action::PlayContext {
+                                    uri: uri.clone(),
+                                    offset_uri: None,
+                                    offset_index: None,
+                                });
                             }
                         }
                     }
-                    if !play_clicked && response.clicked() {
-                        app.actions.push(Action::Open(page.clone()));
-                    }
-                    crate::autoscroll::row(ui, &response);
-                    theme::focus_ring(ui, &response);
-                    if !liked && let Some(uri) = uri {
-                        egui::Popup::context_menu(&response)
-                            .id(ui.make_persistent_id(("quick-access-menu", uri)))
-                            .frame(widgets::menu_frame(&palette))
-                            .show(|ui| {
-                                widgets::context_menu_items(
-                                    ui,
-                                    app,
-                                    uri,
-                                    name,
-                                    owned_playlist.as_ref(),
-                                );
-                            });
-                    }
                 }
-            });
+                if !play_clicked && response.clicked() {
+                    app.actions.push(Action::Open(page.clone()));
+                }
+                crate::autoscroll::row(ui, &response);
+                theme::focus_ring(ui, &response);
+                if !liked && let Some(uri) = uri {
+                    egui::Popup::context_menu(&response)
+                        .id(ui.make_persistent_id(("quick-access-menu", uri)))
+                        .frame(widgets::menu_frame(&palette))
+                        .show(|ui| {
+                            widgets::context_menu_items(
+                                ui,
+                                app,
+                                uri,
+                                name,
+                                owned_playlist.as_ref(),
+                            );
+                        });
+                }
+            }
         },
     );
-    ui.add_space(6.0);
 }
 
 fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
