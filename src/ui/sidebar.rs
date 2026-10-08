@@ -1,6 +1,6 @@
 //! The left panel: navigation and Your Library.
 
-use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
+use egui::{Align, Color32, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::pick_image;
 use crate::app::App;
@@ -371,13 +371,25 @@ fn sort_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibraryS
     ui.add_space(4.0);
     let response = ui.add(
         egui::Button::image_and_text(
-            Icon::ChevronDown.image(app.palette.text, 15.0),
-            egui::RichText::new(label.as_ref()).font(theme::medium(13.0)),
+            Icon::ChevronDown.image(app.palette.secondary, 14.0),
+            egui::RichText::new(label.as_ref()).font(theme::medium(12.5)),
         )
         .wrap()
-        .fill(app.palette.surface)
+        .fill(if app.palette.dark {
+            Color32::from_white_alpha(14)
+        } else {
+            app.palette.surface
+        })
+        .stroke(egui::Stroke::new(
+            1.0,
+            if app.palette.dark {
+                Color32::from_white_alpha(18)
+            } else {
+                Color32::from_black_alpha(12)
+            },
+        ))
         .corner_radius(12)
-        .min_size(vec2(0.0, 28.0)),
+        .min_size(vec2(0.0, 26.0)),
     );
     if selected == LibrarySort::RecentlyPlayed
         && matches!(
@@ -509,8 +521,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .default_size(app.settings.sidebar_width)
         .size_range(fit.range.clone())
         .show_separator_line(false)
-        .frame(Frame::new().fill(palette.panel).inner_margin(Margin {
-            left: 12,
+        .frame(Frame::new().fill(palette.window).inner_margin(Margin {
+            left: 10,
             right: 8,
             top,
             bottom: if expanded_art { 0 } else { 8 },
@@ -1031,10 +1043,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 vec2(rail_w, ui.available_height()),
                 Layout::top_down(Align::Center),
                 |ui| {
-                    let rail_rect =
-                        Rect::from_min_size(ui.cursor().min + vec2(0.0, 4.0), vec2(rail_w, rail_h));
+                    let top_offset = ((ui.available_height() - rail_h) * 0.25).clamp(4.0, 48.0);
+                    let rail_rect = Rect::from_min_size(
+                        ui.cursor().min + vec2(0.0, top_offset),
+                        vec2(rail_w, rail_h),
+                    );
                     render_floating_rail(app, ui, rail_rect, true);
-                    ui.add_space(rail_h + 8.0);
+                    ui.add_space(rail_h + top_offset + 4.0);
                 },
             );
             ui.add_space(6.0);
@@ -1186,7 +1201,7 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     });
     let (sub_rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 16.0), Sense::hover());
     ui.painter().text(
-        pos2(sub_rect.left() + 6.0, sub_rect.center().y),
+        pos2(sub_rect.left() + 8.0, sub_rect.center().y),
         egui::Align2::LEFT_CENTER,
         gettext(locale, "All Music"),
         theme::medium(12.0),
@@ -1552,18 +1567,35 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     if active {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(7),
+                            CornerRadius::same(9),
                             if palette.dark {
-                                palette.accent.gamma_multiply(0.14)
+                                Color32::from_white_alpha(32)
                             } else {
-                                palette.accent.gamma_multiply(0.10)
+                                Color32::from_black_alpha(24)
                             },
+                        );
+                        ui.painter().rect_stroke(
+                            rect,
+                            CornerRadius::same(9),
+                            egui::Stroke::new(
+                                1.0,
+                                if palette.dark {
+                                    Color32::from_white_alpha(24)
+                                } else {
+                                    Color32::from_black_alpha(16)
+                                },
+                            ),
+                            egui::StrokeKind::Inside,
                         );
                     } else if response.hovered() {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(7),
-                            palette.surface_hover.gamma_multiply(0.55),
+                            CornerRadius::same(9),
+                            if palette.dark {
+                                Color32::from_white_alpha(16)
+                            } else {
+                                Color32::from_black_alpha(12)
+                            },
                         );
                     }
                     if drop_hover {

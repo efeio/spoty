@@ -775,6 +775,19 @@ fn soft_button_inner(
             palette.surface
         };
         ui.painter().rect_filled(rect, rect.height() / 2.0, fill);
+        if !active {
+            let stroke_color = if palette.dark {
+                Color32::from_white_alpha(if hovered { 25 } else { 12 })
+            } else {
+                Color32::from_black_alpha(if hovered { 20 } else { 10 })
+            };
+            ui.painter().rect_stroke(
+                rect,
+                rect.height() / 2.0,
+                egui::Stroke::new(1.0, stroke_color),
+                egui::StrokeKind::Inside,
+            );
+        }
         let mut x = rect.left() + padding.x;
         if let Some(icon) = icon {
             let icon = if dismiss.is_some() && hovered {
