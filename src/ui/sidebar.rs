@@ -1057,7 +1057,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 vec2(ui.available_width(), ui.available_height()),
                 Layout::top_down(Align::Min),
                 |ui| {
-                    library_sub_panel(app, ui, grid_art);
+                    library_sub_panel(app, ui, grid_art, true);
                 },
             );
         });
@@ -1067,11 +1067,11 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
         let rail_rect = Rect::from_center_size(rect.center(), vec2(rail_w, 36.0));
         render_floating_rail(app, ui, rail_rect, false);
         ui.add_space(6.0);
-        library_sub_panel(app, ui, grid_art);
+        library_sub_panel(app, ui, grid_art, false);
     }
 }
 
-fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
+fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>, spatial_mode: bool) {
     let palette = app.palette;
     let locale = app.locale;
 
@@ -1199,15 +1199,18 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             });
         });
     });
-    let (sub_rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 16.0), Sense::hover());
-    ui.painter().text(
-        pos2(sub_rect.left() + 8.0, sub_rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        gettext(locale, "All Music"),
-        theme::medium(12.0),
-        palette.secondary,
-    );
-    ui.add_space(4.0);
+    if spatial_mode {
+        let (sub_rect, _) =
+            ui.allocate_exact_size(vec2(ui.available_width(), 16.0), Sense::hover());
+        ui.painter().text(
+            pos2(sub_rect.left() + 8.0, sub_rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            gettext(locale, "All Music"),
+            theme::medium(12.0),
+            palette.secondary,
+        );
+        ui.add_space(4.0);
+    }
 
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
