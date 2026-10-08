@@ -75,7 +75,7 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 24.0;
         let (rect, _) = ui.allocate_exact_size(Vec2::splat(cover_size), Sense::hover());
-        let radius = if hero.round { cover_size / 2.0 } else { 6.0 };
+        let radius = if hero.round { cover_size / 2.0 } else { 10.0 };
         widgets::paint_shadow(ui, &palette, rect, radius);
         if hero.liked {
             super::sidebar::liked_cover(ui, rect, radius);
@@ -94,6 +94,19 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
                 radius,
                 if hero.round { Icon::User } else { Icon::Music },
                 Some(app.backend.art()),
+            );
+        }
+        if !hero.round {
+            let inner_stroke_color = if palette.dark {
+                egui::Color32::from_white_alpha(16)
+            } else {
+                egui::Color32::from_black_alpha(18)
+            };
+            ui.painter().rect_stroke(
+                rect,
+                radius,
+                egui::Stroke::new(1.0, inner_stroke_color),
+                egui::StrokeKind::Inside,
             );
         }
         ui.vertical(|ui| {
@@ -199,48 +212,58 @@ pub fn actions_row(
                     palette.on_accent,
                     &gettext(locale, "Starting…"),
                 );
-            } else if ui
-                .add_enabled_ui(now_playing_here || can_start, |ui| {
-                    theme::circle_button(
-                        ui,
-                        icon,
-                        56.0,
-                        palette.accent,
-                        palette.accent_hover,
-                        palette.on_accent,
-                        &if now_playing_here {
-                            gettext(locale, "Pause")
-                        } else {
-                            gettext(locale, "Play")
-                        },
+            } else {
+                let play_center = pos2(ui.cursor().left() + 28.0, ui.cursor().center().y);
+                ui.painter().circle_filled(
+                    play_center + vec2(0.0, 2.0),
+                    28.0,
+                    egui::Color32::from_black_alpha(if palette.dark { 40 } else { 20 }),
+                );
+                if ui
+                    .add_enabled_ui(now_playing_here || can_start, |ui| {
+                        theme::circle_button(
+                            ui,
+                            icon,
+                            56.0,
+                            palette.accent,
+                            palette.accent_hover,
+                            palette.on_accent,
+                            &if now_playing_here {
+                                gettext(locale, "Pause")
+                            } else {
+                                gettext(locale, "Play")
+                            },
+                        )
+                    })
+                    .inner
+                    .on_disabled_hover_text(
+                        gettext(locale, "No playable songs in this view").as_ref(),
                     )
-                })
-                .inner
-                .on_disabled_hover_text(gettext(locale, "No playable songs in this view").as_ref())
-                .clicked()
-            {
-                if now_playing_here {
-                    app.actions.push(Action::TogglePlay);
-                } else if let Some(uris) = actions.view.clone()
-                    && play_view
+                    .clicked()
                 {
-                    app.actions.push(Action::PlayFromRow {
-                        context: RowContext::View {
-                            uris: Arc::clone(&uris),
-                            context_uri: uri.clone(),
-                            // Header playback needs no edit rights; row
-                            // menus carry theirs via the table conversion.
-                            editable_playlist: None,
-                        },
-                        uri: String::new(),
-                        index: 0,
-                    });
-                } else {
-                    app.actions.push(Action::PlayContext {
-                        uri: uri.clone(),
-                        offset_uri: None,
-                        offset_index: None,
-                    });
+                    if now_playing_here {
+                        app.actions.push(Action::TogglePlay);
+                    } else if let Some(uris) = actions.view.clone()
+                        && play_view
+                    {
+                        app.actions.push(Action::PlayFromRow {
+                            context: RowContext::View {
+                                uris: Arc::clone(&uris),
+                                context_uri: uri.clone(),
+                                // Header playback needs no edit rights; row
+                                // menus carry theirs via the table conversion.
+                                editable_playlist: None,
+                            },
+                            uri: String::new(),
+                            index: 0,
+                        });
+                    } else {
+                        app.actions.push(Action::PlayContext {
+                            uri: uri.clone(),
+                            offset_uri: None,
+                            offset_index: None,
+                        });
+                    }
                 }
             }
             let shuffle = app.playing_context_shuffle();

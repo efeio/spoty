@@ -1396,12 +1396,17 @@ fn track_row_contents(
             pos2(x + size / 2.0 + 2.0, rect.center().y),
             Vec2::splat(size),
         );
+        ui.painter().rect_filled(
+            cover_rect.translate(vec2(0.0, 1.0)),
+            CornerRadius::same(6),
+            Color32::from_black_alpha(if palette.dark { 30 } else { 15 }),
+        );
         paint_cover(
             ui,
             &palette,
             row.item.image(64),
             cover_rect,
-            4.0,
+            6.0,
             if row.item.is_track() {
                 Icon::Music
             } else {
@@ -1415,7 +1420,7 @@ fn track_row_contents(
             let scrim = |alpha: u8| {
                 painter.rect_filled(
                     cover_rect,
-                    CornerRadius::same(4),
+                    CornerRadius::same(6),
                     Color32::from_black_alpha(alpha),
                 );
             };
