@@ -1406,66 +1406,6 @@ fn collapsed_contents(app: &mut App, ui: &mut egui::Ui) {
     );
 }
 
-fn nav_row_with_accessible(
-    ui: &mut egui::Ui,
-    palette: &Palette,
-    icon: Icon,
-    label: &str,
-    accessible_label: &str,
-    active: bool,
-) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
-    if ui.is_rect_visible(rect) {
-        if active {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_active,
-            );
-            ui.painter().rect_stroke(
-                rect,
-                CornerRadius::same(8),
-                egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.4)),
-                egui::StrokeKind::Inside,
-            );
-        } else if response.hovered() {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_hover.gamma_multiply(0.55),
-            );
-        }
-        let color = if active {
-            palette.text
-        } else if response.hovered() {
-            palette.text
-        } else {
-            palette.secondary
-        };
-        let icon_color = if active {
-            palette.accent
-        } else if response.hovered() {
-            palette.text
-        } else {
-            palette.secondary
-        };
-        let icon_rect =
-            Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(16.0));
-        icon.image(icon_color, 16.0).paint_at(ui, icon_rect);
-        ui.painter().text(
-            pos2(rect.left() + 38.0, rect.center().y),
-            egui::Align2::LEFT_CENTER,
-            label,
-            theme::medium(13.0),
-            color,
-        );
-    }
-    response.widget_info(|| {
-        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, accessible_label)
-    });
-    theme::focus_ring(ui, &response);
-    response
-}
 
 fn nav_row(
     ui: &mut egui::Ui,
@@ -1536,11 +1476,6 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     let page = app.page().clone();
     let locale = app.locale;
 
-    if palette.dark {
-        let side_header = Rect::from_min_size(ui.max_rect().min, vec2(ui.max_rect().width(), 260.0));
-        let side_top = egui::Color32::from_rgba_unmultiplied(0x28, 0x64, 0x58, 120);
-        super::widgets::paint_vertical_gradient(ui, side_header, side_top, palette.panel);
-    }
 
     let filter_id = egui::Id::new("sidebar-filter");
     let filter = ui
@@ -1576,57 +1511,16 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     });
     ui.add_space(10.0);
 
-    let recently_added_label = if locale == Locale::Turkish { "Son Eklenenler" } else { "Recently Added" };
-    if nav_row_with_accessible(
+    if nav_row(
         ui,
         &palette,
-        Icon::Clock,
-        recently_added_label,
+        Icon::House,
         &gettext(locale, "Home"),
         page == Page::Home,
     )
     .clicked()
     {
         app.actions.push(Action::Open(Page::Home));
-    }
-    ui.add_space(2.0);
-
-    if nav_row(
-        ui,
-        &palette,
-        Icon::Mic,
-        &gettext(locale, "Artists"),
-        page == Page::Artists,
-    )
-    .clicked()
-    {
-        app.actions.push(Action::Open(Page::Artists));
-    }
-    ui.add_space(2.0);
-
-    if nav_row(
-        ui,
-        &palette,
-        Icon::Disc,
-        &gettext(locale, "Albums"),
-        page == Page::Albums,
-    )
-    .clicked()
-    {
-        app.actions.push(Action::Open(Page::Albums));
-    }
-    ui.add_space(2.0);
-
-    if nav_row(
-        ui,
-        &palette,
-        Icon::Music,
-        &gettext(locale, "Songs"),
-        page == Page::LikedSongs,
-    )
-    .clicked()
-    {
-        app.actions.push(Action::Open(Page::LikedSongs));
     }
     ui.add_space(2.0);
 
@@ -1641,7 +1535,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     {
         app.actions.push(Action::Open(Page::TopSongs));
     }
-    ui.add_space(12.0);
+    ui.add_space(10.0);
 
     ui.horizontal(|ui| {
         ui.add_space(4.0);
@@ -1668,9 +1562,10 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     add_uris: Vec::new(),
                 }));
             }
-            sort_menu(app, ui, filter, sort);
         });
     });
+    ui.add_space(4.0);
+    sort_menu(app, ui, filter, sort);
     ui.add_space(4.0);
 
     ui.data_mut(|data| {

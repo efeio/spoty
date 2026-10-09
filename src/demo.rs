@@ -1510,7 +1510,7 @@ mod tests {
             accessible_frame(&ctx, &mut app, vec![]);
             let tree = accessible_frame(&ctx, &mut app, vec![]);
             let home = accessible_node(&tree, &gettext(locale, "Home"), Role::Button);
-            let artists = accessible_node(&tree, &gettext(locale, "Artists"), Role::Button);
+            let made_for_you = accessible_node(&tree, &gettext(locale, "Made for You"), Role::Button);
             accessible_node(&tree, &gettext(locale, "Create a playlist"), Role::Button);
             accessible_node(
                 &tree,
@@ -1528,7 +1528,7 @@ mod tests {
                 &mut app,
                 vec![keyboard(egui::Key::Tab, egui::Modifiers::NONE)],
             );
-            assert_eq!(tree.focus, artists, "Tab order must survive translation");
+            assert_eq!(tree.focus, made_for_you, "Tab order must survive translation");
             accessible_frame(
                 &ctx,
                 &mut app,

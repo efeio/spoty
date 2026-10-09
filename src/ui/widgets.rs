@@ -3021,12 +3021,12 @@ pub fn search_field(
     );
     let fill = if has_focus {
         if palette.dark {
-            egui::Color32::from_rgba_unmultiplied(35, 78, 68, 220)
+            egui::Color32::from_rgba_unmultiplied(32, 38, 48, 220)
         } else {
             egui::Color32::from_rgba_unmultiplied(242, 245, 250, 230)
         }
     } else if palette.dark {
-        egui::Color32::from_rgba_unmultiplied(20, 52, 45, 180)
+        egui::Color32::from_rgba_unmultiplied(22, 26, 34, 180)
     } else {
         egui::Color32::from_rgba_unmultiplied(236, 240, 246, 190)
     };
@@ -3037,7 +3037,7 @@ pub fn search_field(
         Stroke::new(
             1.0,
             if palette.dark {
-                palette.outline.gamma_multiply(0.6)
+                egui::Color32::from_white_alpha(20)
             } else {
                 egui::Color32::from_black_alpha(15)
             },
