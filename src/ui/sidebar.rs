@@ -1,7 +1,7 @@
 //! The left panel: navigation and Your Library.
 
 use egui::{Align, Color32, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
-use super::{blend, page_tint, widgets};
+
 
 use crate::api::models::pick_image;
 use crate::app::App;
@@ -591,17 +591,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             bottom: if expanded_art { 0 } else { 8 },
         }));
     let response = panel.show(ui, |ui| {
-        let side_rect = ui.max_rect();
-        let side_ambient = page_tint(app).unwrap_or_else(|| {
-            blend(palette.panel, palette.accent, if palette.dark { 0.30 } else { 0.15 })
-        });
-        let side_top = blend(palette.panel, side_ambient, if palette.dark { 0.45 } else { 0.22 });
-        widgets::paint_vertical_gradient(
-            ui,
-            Rect::from_min_size(side_rect.min, vec2(side_rect.width(), 360.0)),
-            side_top,
-            palette.panel,
-        );
+
         let art_rect = expanded_art.then(|| expanded_art_rect(ui));
         if let Some(rect) = art_rect.filter(|_| !floating_art) {
             reserve_expanded_art(ui, rect);
@@ -1574,14 +1564,10 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
 
     ui.horizontal(|ui| {
         ui.add_space(4.0);
-        ui.with_layout(Layout::left_to_right(Align::Min), |ui| {
-            ui.vertical(|ui| {
-                theme::text(ui, gettext(locale, "Library"), theme::bold(21.0), palette.text);
-                ui.add_space(-2.0);
-                theme::text(ui, gettext(locale, "All Music"), theme::regular(12.0), palette.secondary);
-            });
+        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+            theme::text(ui, gettext(locale, "Library"), theme::semibold(14.0), palette.text);
         });
-        ui.with_layout(Layout::right_to_left(Align::Min), |ui| {
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             if theme::icon_button(
                 ui,
@@ -1598,7 +1584,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             library_options_menu(app, ui, filter, sort);
         });
     });
-    ui.add_space(10.0);
+    ui.add_space(8.0);
 
     if nav_row(
         ui,

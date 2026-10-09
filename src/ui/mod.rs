@@ -257,41 +257,23 @@ fn page_tint(app: &mut App) -> Option<Color32> {
 fn central(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let tint = page_tint(app);
-    let glass_window = if palette.dark {
-        Color32::from_rgba_unmultiplied(
-            palette.window.r(),
-            palette.window.g(),
-            palette.window.b(),
-            210,
-        )
-    } else {
-        Color32::from_rgba_unmultiplied(
-            palette.window.r(),
-            palette.window.g(),
-            palette.window.b(),
-            230,
-        )
-    };
     egui::CentralPanel::default()
-        .frame(Frame::new().fill(glass_window))
+        .frame(Frame::new().fill(palette.window))
         .show(ui, |ui| {
             let rect = ui.max_rect();
-            let liquid_ambient = tint.unwrap_or_else(|| {
-                blend(palette.window, palette.accent, if palette.dark { 0.38 } else { 0.18 })
-            });
-            let strength = if tint.is_some() && !matches!(
-                app.page(),
-                Page::Home | Page::Search | Page::Settings | Page::Queue
-            ) {
-                0.85
-            } else if palette.dark {
-                0.60
-            } else {
-                0.32
-            };
-            let top = blend(palette.window, liquid_ambient, strength);
-            let header = Rect::from_min_size(rect.min, vec2(rect.width(), 480.0));
-            widgets::paint_vertical_gradient(ui, header, top, palette.window);
+            if let Some(tint) = tint {
+                let strength = if matches!(
+                    app.page(),
+                    Page::Home | Page::Search | Page::Settings | Page::Queue
+                ) {
+                    0.35
+                } else {
+                    0.75
+                };
+                let top = blend(palette.window, tint, strength);
+                let header = Rect::from_min_size(rect.min, vec2(rect.width(), 320.0));
+                widgets::paint_vertical_gradient(ui, header, top, palette.window);
+            }
             ui.spacing_mut().item_spacing = vec2(8.0, 6.0);
             // egui fades a scrolled page's edge into the panel's plain
             // colour, which shows as a pale band over a cover's tint; the
