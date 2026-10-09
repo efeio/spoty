@@ -466,33 +466,37 @@ fn featured_recent_track(ui: &mut egui::Ui, app: &mut App, track: &crate::api::m
 
         let text_left = cover_rect.right() + 18.0;
         let text_right = rect.right() - 18.0;
-        let title_rect = Rect::from_min_max(
-            pos2(text_left, cover_rect.top() + 24.0),
-            pos2(text_right, cover_rect.top() + 84.0),
+        let text_width = (text_right - text_left).max(0.0);
+        let title_font = theme::bold(22.0);
+        let subtitle_font = theme::regular(13.5);
+
+        let title_galley =
+            widgets::ellipsized(ui, &track.name, title_font, palette.text, text_width, 2);
+        let title_top = cover_rect.top() + 24.0;
+        let title_rect = Rect::from_min_size(
+            pos2(text_left, title_top),
+            vec2(text_width, title_galley.size().y),
         );
-        crate::bidi::paint_line(
-            &ui.painter().with_clip_rect(title_rect),
-            title_rect.left(),
-            title_rect.right(),
-            title_rect.top() + 8.0,
-            &track.name,
-            theme::bold(22.0),
-            palette.text,
-        );
+        let title_pos = crate::bidi::galley_pos(title_rect, &title_galley);
+        ui.painter().galley(title_pos, title_galley, palette.text);
+
         let artists = track.artist_names();
-        let subtitle_rect = Rect::from_min_max(
-            pos2(text_left, title_rect.bottom() + 2.0),
-            pos2(text_right, title_rect.bottom() + 36.0),
-        );
-        crate::bidi::paint_line(
-            &ui.painter().with_clip_rect(subtitle_rect),
-            subtitle_rect.left(),
-            subtitle_rect.right(),
-            subtitle_rect.top() + 2.0,
+        let subtitle_galley = widgets::ellipsized(
+            ui,
             &artists,
-            theme::regular(13.5),
+            subtitle_font,
             palette.secondary,
+            text_width,
+            2,
         );
+        let subtitle_top = title_rect.bottom() + 6.0;
+        let subtitle_rect = Rect::from_min_size(
+            pos2(text_left, subtitle_top),
+            vec2(text_width, subtitle_galley.size().y),
+        );
+        let subtitle_pos = crate::bidi::galley_pos(subtitle_rect, &subtitle_galley);
+        ui.painter()
+            .galley(subtitle_pos, subtitle_galley, palette.secondary);
 
         if hovered || response.has_focus() || playing_here {
             let button_rect = Rect::from_center_size(
