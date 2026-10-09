@@ -757,6 +757,10 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
     }
     for surface in show.unwrap_or("").split(',').map(str::trim) {
         match surface {
+            "library-collapsed" => {
+                app.settings.sidebar_width = 72.0;
+                app.settings.art_expanded = false;
+            }
             "library-list"
             | "library-list-narrow"
             | "library-list-wide"
