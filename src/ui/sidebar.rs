@@ -12,14 +12,6 @@ use crate::theme::{self, Icon, Palette};
 fn library_options_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibrarySort) {
     let locale = app.locale;
     let palette = app.palette;
-    let response = theme::icon_button(
-        ui,
-        Icon::Ellipsis,
-        16.0,
-        palette.secondary,
-        palette.text,
-        &gettext(locale, "Library options"),
-    );
     let labels = [
         (LibrarySort::Library, gettext(locale, "Library order")),
         (
@@ -37,6 +29,19 @@ fn library_options_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selecte
             gettext(locale, "Spotify custom order"),
         ),
     ];
+    let label = &labels
+        .iter()
+        .find(|(sort, _)| *sort == selected)
+        .expect("sort label")
+        .1;
+    let response = theme::icon_button(
+        ui,
+        Icon::Ellipsis,
+        16.0,
+        palette.secondary,
+        palette.text,
+        label,
+    );
     egui::Popup::menu(&response)
         .frame(super::widgets::menu_frame(&app.palette))
         .show(|ui| {
@@ -406,74 +411,6 @@ pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
     }
 }
 
-fn sort_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibrarySort) {
-    let locale = app.locale;
-    let labels = [
-        (LibrarySort::Library, gettext(locale, "Library order")),
-        (
-            LibrarySort::RecentlyPlayed,
-            gettext(locale, "Recently played"),
-        ),
-        (LibrarySort::Name, gettext(locale, "Name")),
-        (
-            LibrarySort::RecentlyAdded,
-            gettext(locale, "Recently added"),
-        ),
-        (LibrarySort::Local, gettext(locale, "Local custom order")),
-        (
-            LibrarySort::Spotify,
-            gettext(locale, "Spotify custom order"),
-        ),
-    ];
-    let label = &labels
-        .iter()
-        .find(|(sort, _)| *sort == selected)
-        .expect("sort label")
-        .1;
-    ui.add_space(4.0);
-    let response = ui.add(
-        egui::Button::image_and_text(
-            Icon::ChevronDown.image(app.palette.text, 15.0),
-            egui::RichText::new(label.as_ref()).font(theme::medium(13.0)),
-        )
-        .wrap()
-        .fill(app.palette.surface)
-        .corner_radius(12)
-        .min_size(vec2(0.0, 28.0)),
-    );
-    egui::Popup::menu(&response)
-        .frame(super::widgets::menu_frame(&app.palette))
-        .show(|ui| {
-            let width = labels
-                .iter()
-                .map(|(_, label)| {
-                    ui.painter()
-                        .layout_no_wrap(label.to_string(), theme::regular(13.5), app.palette.text)
-                        .size()
-                        .x
-                })
-                .fold(140.0_f32, f32::max)
-                + 52.0;
-            ui.set_width(width.min(ui.ctx().content_rect().width() - 24.0));
-            for (sort, label) in &labels {
-                if !sort.supports(shelf)
-                    || (*sort == LibrarySort::Library && shelf == Filter::Playlists)
-                    || (*sort == LibrarySort::Local && app.settings.sidebar_order.is_empty())
-                {
-                    continue;
-                }
-                if super::widgets::menu_item(
-                    ui,
-                    &app.palette,
-                    (*sort == selected).then_some(Icon::Check),
-                    label,
-                ) {
-                    app.actions
-                        .push(Action::SetLibrarySort { shelf, sort: *sort });
-                }
-            }
-        });
-}
 
 fn saved_time(value: Option<&str>) -> Option<i64> {
     value
@@ -1407,6 +1344,98 @@ fn collapsed_contents(app: &mut App, ui: &mut egui::Ui) {
 }
 
 
+fn all_playlists_row(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    locale: Locale,
+    active: bool,
+    on_create: &mut bool,
+) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
+    let plus_width = 30.0;
+    let plus_rect = Rect::from_min_max(
+        pos2(rect.right() - plus_width, rect.top()),
+        rect.right_bottom(),
+    );
+    let plus_resp = ui.interact(plus_rect, ui.make_persistent_id("create-playlist-btn"), Sense::click());
+    if plus_resp.clicked() {
+        *on_create = true;
+    }
+
+    if ui.is_rect_visible(rect) {
+        if active {
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(8),
+                palette.surface_active,
+            );
+            ui.painter().rect_stroke(
+                rect,
+                CornerRadius::same(8),
+                egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.4)),
+                egui::StrokeKind::Inside,
+            );
+        } else if response.hovered() && !plus_resp.hovered() {
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(8),
+                palette.surface_hover.gamma_multiply(0.55),
+            );
+        }
+        let color = if active {
+            palette.text
+        } else if response.hovered() && !plus_resp.hovered() {
+            palette.text
+        } else {
+            palette.secondary
+        };
+        let icon_color = if active {
+            palette.accent
+        } else if response.hovered() && !plus_resp.hovered() {
+            palette.text
+        } else {
+            palette.secondary
+        };
+        let icon_rect =
+            Rect::from_center_size(pos2(rect.left() + 18.0, rect.center().y), Vec2::splat(16.0));
+        Icon::LayoutGrid.image(icon_color, 16.0).paint_at(ui, icon_rect);
+        ui.painter().text(
+            pos2(rect.left() + 38.0, rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            gettext(locale, "All Playlists"),
+            theme::medium(13.0),
+            color,
+        );
+
+        let plus_icon_color = if plus_resp.hovered() {
+            palette.text
+        } else {
+            palette.secondary
+        };
+        if plus_resp.hovered() {
+            ui.painter().rect_filled(
+                Rect::from_center_size(plus_rect.center(), Vec2::splat(22.0)),
+                CornerRadius::same(6),
+                palette.surface_hover,
+            );
+        }
+        Icon::Plus.image(plus_icon_color, 15.0).paint_at(
+            ui,
+            Rect::from_center_size(plus_rect.center(), Vec2::splat(15.0)),
+        );
+    }
+    plus_resp.widget_info(|| {
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), gettext(locale, "Create a playlist"))
+    });
+    let plus_resp = plus_resp.on_hover_text(gettext(locale, "Create a playlist"));
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, gettext(locale, "All Playlists"))
+    });
+    theme::focus_ring(ui, &response);
+    theme::focus_ring(ui, &plus_resp);
+    response
+}
+
 fn nav_row(
     ui: &mut egui::Ui,
     palette: &Palette,
@@ -1537,36 +1566,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     }
     ui.add_space(10.0);
 
-    ui.horizontal(|ui| {
-        ui.add_space(4.0);
-        theme::text(ui, gettext(locale, "Playlist"), theme::bold(14.0), palette.text);
-        ui.add_space(2.0);
-        Icon::ChevronDown.image(palette.secondary, 12.0).paint_at(
-            ui,
-            Rect::from_center_size(pos2(ui.cursor().left() + 4.0, ui.cursor().center().y), Vec2::splat(12.0)),
-        );
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if theme::icon_button(
-                ui,
-                Icon::Plus,
-                15.0,
-                palette.secondary,
-                palette.text,
-                &gettext(locale, "Create a playlist"),
-            )
-            .clicked()
-            {
-                app.actions.push(Action::ShowDialog(Dialog::CreatePlaylist {
-                    name: String::new(),
-                    public: false,
-                    add_uris: Vec::new(),
-                }));
-            }
-        });
-    });
-    ui.add_space(4.0);
-    sort_menu(app, ui, filter, sort);
-    ui.add_space(4.0);
+ui.add_space(4.0);
 
     ui.data_mut(|data| {
         data.insert_temp(filter_id, filter);
@@ -1638,15 +1638,21 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 return;
             }
 
-            if nav_row(
+            let mut create_playlist = false;
+            let resp = all_playlists_row(
                 ui,
                 &palette,
-                Icon::LayoutGrid,
-                &gettext(locale, "All Playlists"),
+                locale,
                 filter == Filter::Playlists && matches!(page, Page::Home),
-            )
-            .clicked()
-            {
+                &mut create_playlist,
+            );
+            if create_playlist {
+                app.actions.push(Action::ShowDialog(Dialog::CreatePlaylist {
+                    name: String::new(),
+                    public: false,
+                    add_uris: Vec::new(),
+                }));
+            } else if resp.clicked() {
                 app.actions.push(Action::Open(Page::Home));
             }
             ui.add_space(2.0);
