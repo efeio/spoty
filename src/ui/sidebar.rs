@@ -512,7 +512,7 @@ pub fn expand_sidebar(app: &mut App, ctx: &egui::Context) {
 
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
-    let is_collapsed = is_sidebar_collapsed(app.settings.sidebar_width);
+    let mut is_collapsed = is_sidebar_collapsed(app.settings.sidebar_width);
     let expanded_art = has_expanded_art(app);
     let floating_art = app.settings.sidebar_grid && expanded_art;
     // The traffic lights float over the top-left of the sidebar now, so the
@@ -523,23 +523,49 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     } else {
         0.0
     };
+
+    let resize_id = egui::Id::new("sidebar").with("__resize");
+    if let Some(res) = ui.ctx().read_response(resize_id) {
+        if res.dragged() || res.drag_stopped() {
+            if let Some(pointer) = res.interact_pointer_pos() {
+                let pointer_x = pointer.x;
+                if is_collapsed {
+                    if pointer_x >= 150.0 {
+                        expand_sidebar(app, ui.ctx());
+                        app.settings.sidebar_width = pointer_x.clamp(super::SIDEBAR_MIN_WIDTH, 600.0);
+                        is_collapsed = false;
+                    }
+                } else if pointer_x < 150.0 {
+                    collapse_sidebar(app, ui.ctx());
+                    is_collapsed = true;
+                } else {
+                    app.settings.sidebar_width = pointer_x.clamp(super::SIDEBAR_MIN_WIDTH, 600.0);
+                }
+            }
+        }
+    }
+
+    let allowed_range = if is_collapsed {
+        super::SIDEBAR_COLLAPSED_WIDTH..=super::SIDEBAR_COLLAPSED_WIDTH
+    } else {
+        super::SIDEBAR_MIN_WIDTH..=600.0
+    };
+
     let fit = super::yielding_panel(
         ui.ctx(),
         "sidebar",
-        super::SIDEBAR_COLLAPSED_WIDTH..=600.0,
+        allowed_range,
         app.settings.sidebar_width,
         ui.available_width() - super::topbar::least_width(ui.ctx()) - beside,
     );
     if let Some(mut state) = egui::containers::panel::PanelState::load(ui.ctx(), egui::Id::new("sidebar")) {
-        if !ui.ctx().is_being_dragged(egui::Id::new("sidebar").with("__resize"))
-            && (state.outer_rect.width() - app.settings.sidebar_width).abs() > 1.0
-        {
+        if (state.outer_rect.width() - app.settings.sidebar_width).abs() > 1.0 {
             state.outer_rect.set_width(app.settings.sidebar_width);
             ui.ctx().data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
         }
     }
     let panel = egui::Panel::left("sidebar")
-        .resizable(true)
+        .resizable(!is_collapsed)
         .default_size(app.settings.sidebar_width)
         .size_range(fit.range.clone())
         .show_separator_line(false)
@@ -563,16 +589,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         }
     });
     let width = response.response.rect.width();
-    let is_dragging = ui.ctx().is_being_dragged(egui::Id::new("sidebar").with("__resize"));
-    let target_width = if is_dragging {
-        if width < 140.0 {
-            super::SIDEBAR_COLLAPSED_WIDTH
-        } else if width < super::SIDEBAR_MIN_WIDTH {
-            super::SIDEBAR_MIN_WIDTH
-        } else {
-            width
-        }
-    } else if width < 140.0 {
+    let target_width = if is_collapsed || width < 150.0 {
         super::SIDEBAR_COLLAPSED_WIDTH
     } else if width < super::SIDEBAR_MIN_WIDTH {
         super::SIDEBAR_MIN_WIDTH
@@ -589,11 +606,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         && super::panel_width_chosen(ui.ctx(), "sidebar", &fit)
     {
         app.settings.sidebar_width = target_width;
-        if !is_dragging {
-            if let Some(mut state) = egui::containers::panel::PanelState::load(ui.ctx(), egui::Id::new("sidebar")) {
-                state.outer_rect.set_width(target_width);
-                ui.ctx().data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
-            }
+        if let Some(mut state) = egui::containers::panel::PanelState::load(ui.ctx(), egui::Id::new("sidebar")) {
+            state.outer_rect.set_width(target_width);
+            ui.ctx().data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
         }
         app.actions.push(Action::SettingsChanged);
     }
@@ -1074,7 +1089,8 @@ fn collapsed_nav_button(
     label: &str,
     active: bool,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
+    let item_width = (super::SIDEBAR_COLLAPSED_WIDTH - 16.0).min(ui.available_width());
+    let (rect, response) = ui.allocate_exact_size(vec2(item_width, 40.0), Sense::click());
     if ui.is_rect_visible(rect) {
         if active {
             ui.painter().rect_filled(
@@ -1147,8 +1163,9 @@ fn collapsed_contents(app: &mut App, ui: &mut egui::Ui) {
     );
     ui.add_space(8.0);
 
+    let item_width = (super::SIDEBAR_COLLAPSED_WIDTH - 16.0).min(ui.available_width());
     let (head_rect, head_resp) =
-        ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
+        ui.allocate_exact_size(vec2(item_width, 36.0), Sense::click());
     head_resp.widget_info(|| {
         egui::WidgetInfo::labeled(
             egui::WidgetType::Button,
@@ -1208,9 +1225,10 @@ fn collapsed_contents(app: &mut App, ui: &mut egui::Ui) {
         egui::Vec2b::new(false, true),
         |ui| {
             ui.spacing_mut().item_spacing = vec2(0.0, 4.0);
+            let item_width = (super::SIDEBAR_COLLAPSED_WIDTH - 16.0).min(ui.available_width());
             for entry in &entries {
                 let (rect, response) =
-                    ui.allocate_exact_size(vec2(ui.available_width(), 48.0), Sense::click());
+                    ui.allocate_exact_size(vec2(item_width, 48.0), Sense::click());
                 let cover_rect = Rect::from_center_size(rect.center(), Vec2::splat(42.0));
                 let active = entry.folder.is_none() && entry.page == current_page;
                 let playing = context_playing
@@ -2961,6 +2979,35 @@ mod ordering_tests {
         expand_sidebar(&mut app, &ctx);
         assert_eq!(app.settings.sidebar_width, 250.0);
         assert!(!is_sidebar_collapsed(app.settings.sidebar_width));
+
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn sidebar_collapsed_rail_locks_width_and_does_not_render_intermediate_widths() {
+        let mut app = app("collapsed-width-lock");
+        let ctx = egui::Context::default();
+        theme::install(&ctx);
+
+        app.settings.sidebar_width = crate::ui::SIDEBAR_COLLAPSED_WIDTH;
+        assert!(is_sidebar_collapsed(app.settings.sidebar_width));
+
+        // When collapsed, rendering the sidebar keeps the width strictly at SIDEBAR_COLLAPSED_WIDTH
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(800.0, 600.0))),
+                ..Default::default()
+            },
+            |ui| {
+                show(&mut app, ui);
+            },
+        );
+        output.textures_delta.clear();
+
+        assert_eq!(app.settings.sidebar_width, crate::ui::SIDEBAR_COLLAPSED_WIDTH);
+        if let Some(state) = egui::containers::panel::PanelState::load(&ctx, egui::Id::new("sidebar")) {
+            assert_eq!(state.outer_rect.width(), crate::ui::SIDEBAR_COLLAPSED_WIDTH);
+        }
 
         app.backend.shutdown();
     }
