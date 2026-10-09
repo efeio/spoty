@@ -2562,7 +2562,7 @@ pub fn shelf(
     add_contents: impl FnOnce(&mut Ui),
 ) {
     ui.add_space(8.0);
-    let scroll_id = ui.make_persistent_id(id);
+    let scroll_id = ui.make_persistent_id(egui::IdSalt::new(id));
     let target_id = scroll_id.with("shelf_target_x");
     let metrics_id = scroll_id.with("shelf_metrics");
 
@@ -2572,68 +2572,80 @@ pub fn shelf(
         .unwrap_or((0.0, 0.0));
     let max_scroll = (content_w - view_w).max(0.0);
 
-    let mut state = egui::scroll_area::State::load(ui.ctx(), scroll_id).unwrap_or_default();
+    let state = egui::scroll_area::State::load(ui.ctx(), scroll_id).unwrap_or_default();
+    let current_x = state.offset.x;
 
-    if ui.input(|i| i.smooth_scroll_delta.x.abs() > 0.0) {
+    // Only cancel animated target if user performs intentional manual scroll.
+    if ui.input(|i| i.smooth_scroll_delta.x.abs() > 3.0) {
         ui.ctx().data_mut(|d| d.remove_temp::<f32>(target_id));
     }
 
-    if let Some(target) = ui.ctx().data(|d| d.get_temp::<f32>(target_id)) {
-        let current = state.offset.x;
-        let dt = ui.ctx().input(|i| i.stable_dt).clamp(0.001, 0.05);
-        let factor = 1.0 - (-18.0 * dt).exp();
-        let diff = target - current;
-        if diff.abs() <= 1.0 {
-            state.offset.x = target;
-            ui.ctx().data_mut(|d| d.remove_temp::<f32>(target_id));
-        } else {
-            state.offset.x = current + diff * factor;
-            ui.ctx().request_repaint();
-        }
-        state.store(ui.ctx(), scroll_id);
-    }
-
-    let current_x = state.offset.x;
-    let can_scroll_left = current_x > 2.0;
-    let can_scroll_right = max_scroll > 5.0 && current_x < max_scroll - 2.0;
+    let active_target = ui.ctx().data(|d| d.get_temp::<f32>(target_id));
+    let current_or_target = active_target.unwrap_or(current_x);
+    let can_scroll_left = current_or_target > 2.0;
+    let can_scroll_right = max_scroll > 5.0 && current_or_target < max_scroll - 2.0;
     let show_nav = max_scroll > 5.0;
+
+    let mut user_clicked_next = false;
+    let mut user_clicked_prev = false;
 
     ui.horizontal(|ui| {
         theme::section_title(ui, palette, title);
         if show_nav {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_space(4.0);
-                let step = (view_w * 0.75).max(240.0);
                 if shelf_nav_button(ui, palette, Icon::ChevronRight, can_scroll_right, "").clicked()
                 {
-                    let target = ui
-                        .ctx()
-                        .data(|d| d.get_temp::<f32>(target_id))
-                        .unwrap_or(current_x);
-                    let next = (target + step).min(max_scroll);
-                    ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
-                    ui.ctx().request_repaint();
+                    user_clicked_next = true;
                 }
                 ui.add_space(4.0);
                 if shelf_nav_button(ui, palette, Icon::ChevronLeft, can_scroll_left, "").clicked() {
-                    let target = ui
-                        .ctx()
-                        .data(|d| d.get_temp::<f32>(target_id))
-                        .unwrap_or(current_x);
-                    let next = (target - step).max(0.0);
-                    ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
-                    ui.ctx().request_repaint();
+                    user_clicked_prev = true;
                 }
             });
         }
     });
 
+    let step = (view_w * 0.85).max(240.0);
+    if user_clicked_next {
+        let base = active_target.unwrap_or(current_x);
+        let next = (base + step).min(max_scroll);
+        ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
+        ui.ctx().request_repaint();
+    } else if user_clicked_prev {
+        let base = active_target.unwrap_or(current_x);
+        let next = (base - step).max(0.0);
+        ui.ctx().data_mut(|d| d.insert_temp(target_id, next));
+        ui.ctx().request_repaint();
+    }
+
+    let mut animated_offset = None;
+    if let Some(target) = ui.ctx().data(|d| d.get_temp::<f32>(target_id)) {
+        let dt = ui.ctx().input(|i| i.stable_dt).clamp(0.001, 0.05);
+        let factor = 1.0 - (-18.0 * dt).exp();
+        let diff = target - current_x;
+        if diff.abs() <= 1.0 {
+            animated_offset = Some(target);
+            ui.ctx().data_mut(|d| d.remove_temp::<f32>(target_id));
+        } else {
+            let next_x = current_x + diff * factor;
+            animated_offset = Some(next_x);
+            ui.ctx().request_repaint();
+        }
+    }
+
     ui.add_space(4.0);
+    let mut scroll_area = egui::ScrollArea::horizontal()
+        .id_salt(id)
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden);
+
+    if let Some(offset) = animated_offset {
+        scroll_area = scroll_area.horizontal_scroll_offset(offset);
+    }
+
     let out = crate::autoscroll::show(
         ui,
-        egui::ScrollArea::horizontal()
-            .id_salt(id)
-            .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden),
+        scroll_area,
         egui::Vec2b::new(true, false),
         |ui| {
             ui.horizontal(|ui| {
@@ -2643,9 +2655,13 @@ pub fn shelf(
         },
     );
 
+    let had_metrics = content_w > 0.0;
     ui.ctx().data_mut(|d| {
         d.insert_temp(metrics_id, (out.content_size.x, out.inner_rect.width()));
     });
+    if !had_metrics && out.content_size.x > out.inner_rect.width() {
+        ui.ctx().request_repaint();
+    }
     ui.add_space(12.0);
 }
 
@@ -3369,6 +3385,109 @@ pub fn proxy_scope_note(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn shelf_navigation_arrows_scroll_content_smoothly() {
+        use std::cell::Cell;
+        let ctx = egui::Context::default();
+        theme::install(&ctx);
+        let palette = Palette::dark();
+        let shelf_left = Cell::new(0.0f32);
+
+        let run_frame = |events: Vec<egui::Event>| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(pos2(0.0, 0.0), vec2(600.0, 400.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    shelf(ui, &palette, "test-shelf-scroll", "Shelf Title", |ui| {
+                        let (_, rect) = ui.allocate_space(vec2(2000.0, 100.0));
+                        shelf_left.set(rect.left());
+                    });
+                },
+            );
+            output.textures_delta.clear();
+            output
+        };
+
+        // Frame 0: measures content (2000) and inner width (600).
+        run_frame(vec![]);
+        let initial_left = shelf_left.get();
+
+        // Frame 1: navigation arrows are visible. Find the right arrow circle.
+        let output1 = run_frame(vec![]);
+        let mut circles = Vec::new();
+        for shape in &output1.shapes {
+            if let egui::epaint::Shape::Circle(c) = &shape.shape {
+                if (c.radius - 13.0).abs() < 0.1 {
+                    circles.push(c.center);
+                }
+            }
+        }
+        assert_eq!(circles.len(), 2, "must have left and right shelf navigation buttons");
+        circles.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
+        let left_button = circles[0];
+        let right_button = circles[1];
+
+        // Click right button:
+        run_frame(vec![
+            egui::Event::PointerMoved(right_button),
+            egui::Event::PointerButton {
+                pos: right_button,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+            egui::Event::PointerButton {
+                pos: right_button,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ]);
+
+        // Run several animation frames
+        for _ in 0..10 {
+            run_frame(vec![]);
+        }
+
+        assert!(
+            shelf_left.get() < initial_left - 100.0,
+            "clicking right arrow must scroll shelf content to the left: initial {}, current {}",
+            initial_left, shelf_left.get()
+        );
+        let scrolled_left = shelf_left.get();
+
+        // Click left button:
+        run_frame(vec![
+            egui::Event::PointerMoved(left_button),
+            egui::Event::PointerButton {
+                pos: left_button,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+            egui::Event::PointerButton {
+                pos: left_button,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ]);
+
+        // Run several animation frames
+        for _ in 0..15 {
+            run_frame(vec![]);
+        }
+
+        assert!(
+            shelf_left.get() > scrolled_left + 100.0,
+            "clicking left arrow must scroll shelf content back towards initial: scrolled {}, current {}",
+            scrolled_left, shelf_left.get()
+        );
+    }
+
     use super::*;
     use crate::app::{App, AppOptions};
     use crate::model::{Action, Page};
