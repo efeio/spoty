@@ -1,6 +1,7 @@
 //! The left panel: navigation and Your Library.
 
-use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
+use egui::{Align, Color32, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
+use super::{blend, page_tint, widgets};
 
 use crate::api::models::pick_image;
 use crate::app::App;
@@ -563,18 +564,44 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             ui.ctx().data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
         }
     }
+    let glass_panel = if palette.dark {
+        Color32::from_rgba_unmultiplied(
+            palette.panel.r(),
+            palette.panel.g(),
+            palette.panel.b(),
+            205,
+        )
+    } else {
+        Color32::from_rgba_unmultiplied(
+            palette.panel.r(),
+            palette.panel.g(),
+            palette.panel.b(),
+            225,
+        )
+    };
     let panel = egui::Panel::left("sidebar")
         .resizable(!is_collapsed)
         .default_size(app.settings.sidebar_width)
         .size_range(fit.range.clone())
         .show_separator_line(false)
-        .frame(Frame::new().fill(palette.panel).inner_margin(Margin {
+        .frame(Frame::new().fill(glass_panel).inner_margin(Margin {
             left: if is_collapsed { 8 } else { 12 },
             right: 8,
             top,
             bottom: if expanded_art { 0 } else { 8 },
         }));
     let response = panel.show(ui, |ui| {
+        let side_rect = ui.max_rect();
+        let side_ambient = page_tint(app).unwrap_or_else(|| {
+            blend(palette.panel, palette.accent, if palette.dark { 0.30 } else { 0.15 })
+        });
+        let side_top = blend(palette.panel, side_ambient, if palette.dark { 0.45 } else { 0.22 });
+        widgets::paint_vertical_gradient(
+            ui,
+            Rect::from_min_size(side_rect.min, vec2(side_rect.width(), 360.0)),
+            side_top,
+            palette.panel,
+        );
         let art_rect = expanded_art.then(|| expanded_art_rect(ui));
         if let Some(rect) = art_rect.filter(|_| !floating_art) {
             reserve_expanded_art(ui, rect);
@@ -587,6 +614,19 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             paint_expanded_art(app, ui, rect);
         }
     });
+    let edge_x = response.response.rect.right();
+    let edge_stroke = if palette.dark {
+        Color32::from_white_alpha(18)
+    } else {
+        Color32::from_black_alpha(16)
+    };
+    ui.painter().line_segment(
+        [
+            pos2(edge_x, response.response.rect.top()),
+            pos2(edge_x, response.response.rect.bottom()),
+        ],
+        egui::Stroke::new(1.0, edge_stroke),
+    );
     let width = response.response.rect.width();
     let target_width = if is_collapsed || width < 150.0 {
         super::SIDEBAR_COLLAPSED_WIDTH
@@ -1363,27 +1403,35 @@ fn all_playlists_row(
     }
 
     if ui.is_rect_visible(rect) {
+        let radius = CornerRadius::same(10);
         if active {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_active,
-            );
+            let glass_fill = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 42)
+            } else {
+                palette.surface_active
+            };
+            ui.painter().rect_filled(rect, radius, glass_fill);
+            let glass_stroke = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 55)
+            } else {
+                palette.outline.gamma_multiply(0.4)
+            };
             ui.painter().rect_stroke(
                 rect,
-                CornerRadius::same(8),
-                egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.4)),
+                radius,
+                egui::Stroke::new(1.0, glass_stroke),
                 egui::StrokeKind::Inside,
             );
         } else if response.hovered() && !plus_resp.hovered() {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_hover.gamma_multiply(0.55),
-            );
+            let hover_fill = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 20)
+            } else {
+                palette.surface_hover.gamma_multiply(0.6)
+            };
+            ui.painter().rect_filled(rect, radius, hover_fill);
         }
         let color = if active {
-            palette.text
+            Color32::WHITE
         } else if response.hovered() && !plus_resp.hovered() {
             palette.text
         } else {
@@ -1416,7 +1464,11 @@ fn all_playlists_row(
             ui.painter().rect_filled(
                 Rect::from_center_size(plus_rect.center(), Vec2::splat(22.0)),
                 CornerRadius::same(6),
-                palette.surface_hover,
+                if palette.dark {
+                    Color32::from_white_alpha(26)
+                } else {
+                    palette.surface_hover
+                },
             );
         }
         Icon::Plus.image(plus_icon_color, 15.0).paint_at(
@@ -1445,27 +1497,35 @@ fn nav_row(
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::click());
     if ui.is_rect_visible(rect) {
+        let radius = CornerRadius::same(10);
         if active {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_active,
-            );
+            let glass_fill = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 42)
+            } else {
+                palette.surface_active
+            };
+            ui.painter().rect_filled(rect, radius, glass_fill);
+            let glass_stroke = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 55)
+            } else {
+                palette.outline.gamma_multiply(0.4)
+            };
             ui.painter().rect_stroke(
                 rect,
-                CornerRadius::same(8),
-                egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.4)),
+                radius,
+                egui::Stroke::new(1.0, glass_stroke),
                 egui::StrokeKind::Inside,
             );
         } else if response.hovered() {
-            ui.painter().rect_filled(
-                rect,
-                CornerRadius::same(8),
-                palette.surface_hover.gamma_multiply(0.55),
-            );
+            let hover_fill = if palette.dark {
+                Color32::from_rgba_unmultiplied(255, 255, 255, 20)
+            } else {
+                palette.surface_hover.gamma_multiply(0.6)
+            };
+            ui.painter().rect_filled(rect, radius, hover_fill);
         }
         let color = if active {
-            palette.text
+            Color32::WHITE
         } else if response.hovered() {
             palette.text
         } else {

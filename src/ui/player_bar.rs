@@ -47,17 +47,31 @@ pub(crate) fn end_tint_session(ctx: &egui::Context) {
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let fill = eased_fill(ui.ctx(), palette.panel, app.now_playing_tint());
+    let glass_fill = if palette.dark {
+        Color32::from_rgba_unmultiplied(fill.r(), fill.g(), fill.b(), 215)
+    } else {
+        Color32::from_rgba_unmultiplied(fill.r(), fill.g(), fill.b(), 235)
+    };
     egui::Panel::bottom("player-bar")
         .exact_size(theme::PLAYER_BAR_HEIGHT)
         .resizable(false)
         .show_separator_line(false)
         .frame(
             Frame::new()
-                .fill(fill)
+                .fill(glass_fill)
                 .inner_margin(Margin::symmetric(16, 0)),
         )
         .show(ui, |ui| {
             let rect = ui.max_rect();
+            let top_stroke = if palette.dark {
+                Color32::from_white_alpha(22)
+            } else {
+                Color32::from_black_alpha(18)
+            };
+            ui.painter().line_segment(
+                [pos2(rect.left() - 16.0, rect.top()), pos2(rect.right() + 16.0, rect.top())],
+                egui::Stroke::new(1.0, top_stroke),
+            );
             let now = app.now_playing();
             // The whole bar, margins included, behind everything else.
             let behind = rect.expand2(vec2(16.0, 0.0));
