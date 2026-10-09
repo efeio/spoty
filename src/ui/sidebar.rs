@@ -1,6 +1,6 @@
 //! The left panel: navigation and Your Library.
 
-use egui::{Align, Color32, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
+use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, vec2};
 
 use crate::api::models::pick_image;
 use crate::app::App;
@@ -371,40 +371,14 @@ fn sort_menu(app: &mut App, ui: &mut egui::Ui, shelf: Filter, selected: LibraryS
     ui.add_space(4.0);
     let response = ui.add(
         egui::Button::image_and_text(
-            Icon::ChevronDown.image(app.palette.secondary, 14.0),
-            egui::RichText::new(label.as_ref()).font(theme::medium(12.5)),
+            Icon::ChevronDown.image(app.palette.text, 15.0),
+            egui::RichText::new(label.as_ref()).font(theme::medium(13.0)),
         )
         .wrap()
-        .fill(if app.palette.dark {
-            Color32::from_white_alpha(14)
-        } else {
-            app.palette.surface
-        })
-        .stroke(egui::Stroke::new(
-            1.0,
-            if app.palette.dark {
-                Color32::from_white_alpha(18)
-            } else {
-                Color32::from_black_alpha(12)
-            },
-        ))
+        .fill(app.palette.surface)
         .corner_radius(12)
-        .min_size(vec2(0.0, 26.0)),
+        .min_size(vec2(0.0, 28.0)),
     );
-    if selected == LibrarySort::RecentlyPlayed
-        && matches!(
-            locale,
-            Locale::ChineseSimplified | Locale::ChineseTraditional
-        )
-    {
-        response.widget_info(|| {
-            egui::WidgetInfo::labeled(
-                egui::WidgetType::Button,
-                ui.is_enabled(),
-                gettext(locale, "Sort by recently played"),
-            )
-        });
-    }
     egui::Popup::menu(&response)
         .frame(super::widgets::menu_frame(&app.palette))
         .show(|ui| {
@@ -521,8 +495,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         .default_size(app.settings.sidebar_width)
         .size_range(fit.range.clone())
         .show_separator_line(false)
-        .frame(Frame::new().fill(palette.window).inner_margin(Margin {
-            left: 10,
+        .frame(Frame::new().fill(palette.panel).inner_margin(Margin {
+            left: 12,
             right: 8,
             top,
             bottom: if expanded_art { 0 } else { 8 },
@@ -817,263 +791,91 @@ fn playlist_entry(
     }
 }
 
-fn rail_dock_button(
+fn nav_row(
     ui: &mut egui::Ui,
-    rect: Rect,
+    palette: &Palette,
     icon: Icon,
     label: &str,
     active: bool,
-    palette: &Palette,
 ) -> egui::Response {
-    let response = ui.allocate_rect(rect, Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
     if ui.is_rect_visible(rect) {
         if active {
-            ui.painter().circle_filled(
-                rect.center(),
-                16.0,
-                if palette.dark {
-                    egui::Color32::from_white_alpha(38)
-                } else {
-                    egui::Color32::from_black_alpha(22)
-                },
-            );
-            ui.painter().circle_stroke(
-                rect.center(),
-                16.0,
-                egui::Stroke::new(
-                    1.0,
-                    if palette.dark {
-                        egui::Color32::from_white_alpha(45)
-                    } else {
-                        egui::Color32::from_black_alpha(28)
-                    },
-                ),
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(7),
+                palette
+                    .accent
+                    .gamma_multiply(if palette.dark { 0.18 } else { 0.12 }),
             );
         } else if response.hovered() {
-            ui.painter().circle_filled(
-                rect.center(),
-                16.0,
-                if palette.dark {
-                    egui::Color32::from_white_alpha(20)
-                } else {
-                    egui::Color32::from_black_alpha(14)
-                },
+            ui.painter().rect_filled(
+                rect,
+                CornerRadius::same(7),
+                palette
+                    .surface_hover
+                    .gamma_multiply(if palette.dark { 0.5 } else { 0.75 }),
             );
         }
-        let tint = if active {
-            if palette.dark {
-                egui::Color32::WHITE
-            } else {
-                palette.text
-            }
+        let color = if active {
+            palette.accent
         } else if response.hovered() {
             palette.text
         } else {
             palette.secondary
         };
-        let icon_size = 18.0;
-        let offset = theme::play_glyph_offset(icon, icon_size);
-        let icon_rect = Rect::from_center_size(rect.center() + offset, Vec2::splat(icon_size));
-        icon.image(tint, icon_size).paint_at(ui, icon_rect);
+        let icon_rect =
+            Rect::from_center_size(pos2(rect.left() + 20.0, rect.center().y), Vec2::splat(18.0));
+        icon.image(color, 18.0).paint_at(ui, icon_rect);
+        ui.painter().text(
+            pos2(rect.left() + 42.0, rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            label,
+            theme::semibold(13.5),
+            color,
+        );
     }
     response.widget_info(|| {
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, label)
     });
     theme::focus_ring(ui, &response);
-    response.on_hover_text(label)
-}
-
-fn render_floating_rail(app: &mut App, ui: &mut egui::Ui, rect: Rect, vertical: bool) {
-    let palette = app.palette;
-    let page = app.page().clone();
-    let locale = app.locale;
-
-    ui.painter().add(
-        egui::epaint::Shadow {
-            offset: [0, 4],
-            blur: 16,
-            spread: 0,
-            color: egui::Color32::from_black_alpha(if palette.dark { 70 } else { 25 }),
-        }
-        .as_shape(rect, CornerRadius::same(20)),
-    );
-    ui.painter().rect_filled(
-        rect,
-        CornerRadius::same(20),
-        if palette.dark {
-            egui::Color32::from_rgba_unmultiplied(22, 26, 32, 175)
-        } else {
-            egui::Color32::from_rgba_unmultiplied(240, 243, 248, 190)
-        },
-    );
-    ui.painter().rect_stroke(
-        rect,
-        CornerRadius::same(20),
-        egui::Stroke::new(
-            1.0,
-            if palette.dark {
-                egui::Color32::from_white_alpha(22)
-            } else {
-                egui::Color32::from_black_alpha(18)
-            },
-        ),
-        egui::StrokeKind::Inside,
-    );
-
-    let slot_rect = |slot: usize| {
-        if vertical {
-            let step = (rect.height() - 8.0) / 6.0;
-            Rect::from_center_size(
-                pos2(
-                    rect.center().x,
-                    rect.top() + 4.0 + slot as f32 * step + step / 2.0,
-                ),
-                Vec2::splat(32.0),
-            )
-        } else {
-            let step = (rect.width() - 8.0) / 6.0;
-            Rect::from_center_size(
-                pos2(
-                    rect.left() + 4.0 + slot as f32 * step + step / 2.0,
-                    rect.center().y,
-                ),
-                Vec2::splat(32.0),
-            )
-        }
-    };
-
-    let home_active = page == Page::Home;
-    let search_active = page == Page::Search;
-    let browse_active = page == Page::TopSongs;
-    let shows_active = page == Page::Podcasts;
-    let radio_active = matches!(page, Page::Radio(_));
-    let library_active = matches!(
-        page,
-        Page::LikedSongs
-            | Page::Albums
-            | Page::Artists
-            | Page::Playlist(_)
-            | Page::Album(_)
-            | Page::Artist(_)
-    );
-
-    // Register Home first, Search second to preserve keyboard Tab navigation.
-    let home_resp = rail_dock_button(
-        ui,
-        slot_rect(0),
-        Icon::CirclePlay,
-        &gettext(locale, "Home"),
-        home_active,
-        &palette,
-    );
-    let search_resp = rail_dock_button(
-        ui,
-        slot_rect(5),
-        Icon::Search,
-        &gettext(locale, "Search"),
-        search_active,
-        &palette,
-    );
-    let browse_resp = rail_dock_button(
-        ui,
-        slot_rect(1),
-        Icon::LayoutGrid,
-        &gettext(locale, "Browse"),
-        browse_active,
-        &palette,
-    );
-    let shows_resp = rail_dock_button(
-        ui,
-        slot_rect(2),
-        Icon::Tv,
-        &gettext(locale, "Podcasts"),
-        shows_active,
-        &palette,
-    );
-    let radio_resp = rail_dock_button(
-        ui,
-        slot_rect(3),
-        Icon::Radio,
-        &gettext(locale, "Radio"),
-        radio_active,
-        &palette,
-    );
-    let lib_resp = rail_dock_button(
-        ui,
-        slot_rect(4),
-        Icon::Library,
-        &gettext(locale, "Library"),
-        library_active,
-        &palette,
-    );
-
-    if home_resp.clicked() {
-        app.actions.push(Action::Open(Page::Home));
-    }
-    if search_resp.clicked() {
-        app.actions.push(Action::FocusSearch);
-    }
-    if browse_resp.clicked() {
-        app.actions.push(Action::Open(Page::TopSongs));
-    }
-    if shows_resp.clicked() {
-        app.actions.push(Action::Open(Page::Podcasts));
-    }
-    if radio_resp.clicked() {
-        if let Some(now) = app.now_playing() {
-            app.actions.push(Action::Open(Page::Radio(now.uri.clone())));
-        } else {
-            app.actions.push(Action::Open(Page::TopSongs));
-        }
-    }
-    if lib_resp.clicked() {
-        app.actions.push(Action::Open(Page::LikedSongs));
-    }
+    response
 }
 
 fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
-    let available_w = ui.available_width();
-    let spatial_mode = available_w >= 265.0;
-
-    if spatial_mode {
-        let rail_w = 44.0;
-        let rail_h = 240.0;
-        ui.horizontal(|ui| {
-            ui.allocate_ui_with_layout(
-                vec2(rail_w, ui.available_height()),
-                Layout::top_down(Align::Center),
-                |ui| {
-                    let top_offset = ((ui.available_height() - rail_h) * 0.25).clamp(4.0, 48.0);
-                    let rail_rect = Rect::from_min_size(
-                        ui.cursor().min + vec2(0.0, top_offset),
-                        vec2(rail_w, rail_h),
-                    );
-                    render_floating_rail(app, ui, rail_rect, true);
-                    ui.add_space(rail_h + top_offset + 4.0);
-                },
-            );
-            ui.add_space(6.0);
-            ui.allocate_ui_with_layout(
-                vec2(ui.available_width(), ui.available_height()),
-                Layout::top_down(Align::Min),
-                |ui| {
-                    library_sub_panel(app, ui, grid_art, true);
-                },
-            );
-        });
-    } else {
-        let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 44.0), Sense::hover());
-        let rail_w = (rect.width() - 8.0).min(232.0);
-        let rail_rect = Rect::from_center_size(rect.center(), vec2(rail_w, 36.0));
-        render_floating_rail(app, ui, rail_rect, false);
-        ui.add_space(6.0);
-        library_sub_panel(app, ui, grid_art, false);
-    }
-}
-
-fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>, spatial_mode: bool) {
     let palette = app.palette;
+    let page = app.page().clone();
     let locale = app.locale;
+    ui.add_space(4.0);
+    if nav_row(
+        ui,
+        &palette,
+        Icon::House,
+        &gettext(locale, "Home"),
+        page == Page::Home,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::Open(Page::Home));
+    }
+    if nav_row(
+        ui,
+        &palette,
+        Icon::Search,
+        &gettext(locale, "Search"),
+        page == Page::Search,
+    )
+    .clicked()
+    {
+        app.actions.push(Action::FocusSearch);
+    }
+    ui.add_space(10.0);
+    ui.painter().hline(
+        ui.max_rect().x_range().shrink(4.0),
+        ui.cursor().top(),
+        egui::Stroke::new(1.0, palette.outline.gamma_multiply(0.45)),
+    );
+    ui.add_space(10.0);
 
     let filter_id = egui::Id::new("sidebar-filter");
     let mut filter = ui
@@ -1085,34 +887,6 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>, s
         .unwrap_or(false);
 
     let mut focus_search = false;
-
-    let container_rect = Rect::from_min_size(
-        ui.cursor().min,
-        vec2(ui.available_width(), ui.available_height()),
-    );
-    ui.painter().rect_filled(
-        container_rect,
-        CornerRadius::same(16),
-        if palette.dark {
-            egui::Color32::from_rgba_unmultiplied(20, 24, 30, 140)
-        } else {
-            egui::Color32::from_rgba_unmultiplied(245, 247, 250, 170)
-        },
-    );
-    ui.painter().rect_stroke(
-        container_rect,
-        CornerRadius::same(16),
-        egui::Stroke::new(
-            1.0,
-            if palette.dark {
-                egui::Color32::from_white_alpha(18)
-            } else {
-                egui::Color32::from_black_alpha(14)
-            },
-        ),
-        egui::StrokeKind::Inside,
-    );
-    ui.add_space(6.0);
 
     ui.horizontal(|ui| {
         ui.add_space(6.0);
@@ -1199,18 +973,7 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>, s
             });
         });
     });
-    if spatial_mode {
-        let (sub_rect, _) =
-            ui.allocate_exact_size(vec2(ui.available_width(), 16.0), Sense::hover());
-        ui.painter().text(
-            pos2(sub_rect.left() + 8.0, sub_rect.center().y),
-            egui::Align2::LEFT_CENTER,
-            gettext(locale, "All Music"),
-            theme::medium(12.0),
-            palette.secondary,
-        );
-        ui.add_space(4.0);
-    }
+    ui.add_space(6.0);
 
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
@@ -1570,35 +1333,18 @@ fn library_sub_panel(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>, s
                     if active {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(9),
+                            CornerRadius::same(7),
                             if palette.dark {
-                                Color32::from_white_alpha(32)
+                                palette.accent.gamma_multiply(0.14)
                             } else {
-                                Color32::from_black_alpha(24)
+                                palette.accent.gamma_multiply(0.10)
                             },
-                        );
-                        ui.painter().rect_stroke(
-                            rect,
-                            CornerRadius::same(9),
-                            egui::Stroke::new(
-                                1.0,
-                                if palette.dark {
-                                    Color32::from_white_alpha(24)
-                                } else {
-                                    Color32::from_black_alpha(16)
-                                },
-                            ),
-                            egui::StrokeKind::Inside,
                         );
                     } else if response.hovered() {
                         ui.painter().rect_filled(
                             rect,
-                            CornerRadius::same(9),
-                            if palette.dark {
-                                Color32::from_white_alpha(16)
-                            } else {
-                                Color32::from_black_alpha(12)
-                            },
+                            CornerRadius::same(7),
+                            palette.surface_hover.gamma_multiply(0.55),
                         );
                     }
                     if drop_hover {
