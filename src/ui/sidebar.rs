@@ -482,6 +482,9 @@ pub fn collapse_sidebar(app: &mut App, ctx: &egui::Context) {
         });
     }
     app.settings.sidebar_width = super::SIDEBAR_COLLAPSED_WIDTH;
+    ctx.data_mut(|d| {
+        d.insert_temp(egui::Id::new("sidebar-programmatic-width"), ());
+    });
     if let Some(mut state) = egui::containers::panel::PanelState::load(ctx, egui::Id::new("sidebar")) {
         state.outer_rect.set_width(super::SIDEBAR_COLLAPSED_WIDTH);
         ctx.data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
@@ -496,6 +499,9 @@ pub fn expand_sidebar(app: &mut App, ctx: &egui::Context) {
         .unwrap_or(250.0)
         .clamp(super::SIDEBAR_MIN_WIDTH, 600.0);
     app.settings.sidebar_width = last;
+    ctx.data_mut(|d| {
+        d.insert_temp(egui::Id::new("sidebar-programmatic-width"), ());
+    });
     if let Some(mut state) = egui::containers::panel::PanelState::load(ctx, egui::Id::new("sidebar")) {
         state.outer_rect.set_width(last);
         ctx.data_mut(|data| data.insert_persisted(egui::Id::new("sidebar"), state));
@@ -574,7 +580,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         width
     };
 
-    if (target_width - app.settings.sidebar_width).abs() > 1.0
+    let programmatic = ui
+        .ctx()
+        .data_mut(|d| d.remove_temp::<()>(egui::Id::new("sidebar-programmatic-width")))
+        .is_some();
+    if !programmatic
+        && (target_width - app.settings.sidebar_width).abs() > 1.0
         && super::panel_width_chosen(ui.ctx(), "sidebar", &fit)
     {
         app.settings.sidebar_width = target_width;
@@ -1138,6 +1149,13 @@ fn collapsed_contents(app: &mut App, ui: &mut egui::Ui) {
 
     let (head_rect, head_resp) =
         ui.allocate_exact_size(vec2(ui.available_width(), 36.0), Sense::click());
+    head_resp.widget_info(|| {
+        egui::WidgetInfo::labeled(
+            egui::WidgetType::Button,
+            ui.is_enabled(),
+            gettext(locale, "Expand Your Library"),
+        )
+    });
     if ui.is_rect_visible(head_rect) {
         if head_resp.hovered() {
             ui.painter().rect_filled(
@@ -1399,15 +1417,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     ui.add_space(10.0);
 
     let filter_id = egui::Id::new("sidebar-filter");
-    let mut filter = ui
+    let filter = ui
         .data(|data| data.get_temp::<Filter>(filter_id))
         .unwrap_or_default();
-    let show_search_id = egui::Id::new("sidebar-show-search");
-    let mut show_search = ui
-        .data(|data| data.get_temp::<bool>(show_search_id))
-        .unwrap_or(false);
-
-    let mut focus_search = false;
 
     ui.horizontal(|ui| {
         ui.add_space(6.0);
@@ -1440,47 +1452,6 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
             {
                 collapse_sidebar(app, ui.ctx());
             }
-            let grid = app.settings.sidebar_grid;
-            let (icon, label) = if grid {
-                (Icon::LayoutList, gettext(locale, "Show as list"))
-            } else {
-                (Icon::LayoutGrid, gettext(locale, "Show as grid"))
-            };
-            let view_resp =
-                theme::icon_button(ui, icon, 16.0, palette.secondary, palette.text, &label);
-            if view_resp.clicked() {
-                app.actions.push(Action::SetLibraryGrid(!grid));
-            }
-            egui::Popup::menu(&view_resp)
-                .frame(super::widgets::menu_frame(&palette))
-                .show(|ui| {
-                    ui.set_width(170.0);
-                    if super::widgets::menu_item(
-                        ui,
-                        &palette,
-                        Some(Icon::LayoutList),
-                        &gettext(locale, "Show as list"),
-                    ) {
-                        app.actions.push(Action::SetLibraryGrid(false));
-                    }
-                    if super::widgets::menu_item(
-                        ui,
-                        &palette,
-                        Some(Icon::LayoutGrid),
-                        &gettext(locale, "Show as grid"),
-                    ) {
-                        app.actions.push(Action::SetLibraryGrid(true));
-                    }
-                    super::widgets::menu_separator(ui, &palette);
-                    if super::widgets::menu_item(
-                        ui,
-                        &palette,
-                        Some(Icon::Disc),
-                        &gettext(locale, "Show covers only"),
-                    ) {
-                        collapse_sidebar(app, ui.ctx());
-                    }
-                });
             // One item never deserved a menu: the plus creates directly.
             if theme::icon_button(
                 ui,
@@ -1497,23 +1468,6 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     public: false,
                     add_uris: Vec::new(),
                 }));
-            }
-            if theme::icon_button(
-                ui,
-                Icon::Search,
-                16.0,
-                palette.secondary,
-                palette.text,
-                &gettext(locale, "Search Your Library"),
-            )
-            .clicked()
-            {
-                show_search = !show_search;
-                if show_search {
-                    focus_search = true;
-                } else {
-                    app.library.filter.clear();
-                }
             }
             // The buttons come first; the heading takes the space left,
             // a little smaller where a translation runs long, and gives way
@@ -1537,40 +1491,11 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
     });
     ui.add_space(6.0);
 
-    ui.horizontal_wrapped(|ui| {
-        ui.spacing_mut().item_spacing = vec2(6.0, 6.0);
-        for (value, label) in [
-            (Filter::Playlists, gettext(locale, "Playlists")),
-            (Filter::Albums, gettext(locale, "Albums")),
-            (Filter::Artists, gettext(locale, "Artists")),
-            (Filter::Podcasts, gettext(locale, "Podcasts")),
-        ] {
-            if theme::soft_button(ui, &palette, None, &label, filter == value).clicked() {
-                filter = value;
-            }
-        }
-    });
     let sort = selected_sort(app, filter);
     sort_menu(app, ui, filter, sort);
     ui.data_mut(|data| {
         data.insert_temp(filter_id, filter);
-        data.insert_temp(show_search_id, show_search);
     });
-    if show_search {
-        ui.add_space(4.0);
-        let response = super::widgets::search_field(
-            ui,
-            &palette,
-            app.locale,
-            egui::Id::new("sidebar-search"),
-            &mut app.library.filter,
-            &gettext(locale, "Search in Your Library"),
-            ui.available_width() - 4.0,
-        );
-        if focus_search {
-            response.request_focus();
-        }
-    }
     ui.add_space(6.0);
 
     ensure_shelf_loading(app, filter, sort);

@@ -1285,7 +1285,7 @@ mod tests {
                 app.locale = locale;
                 app.settings.sidebar_width = width;
                 let heading = crate::i18n::gettext(locale, "Library").into_owned();
-                let search = crate::i18n::gettext(locale, "Search Your Library").into_owned();
+                let create = crate::i18n::gettext(locale, "Create a playlist").into_owned();
                 let mut last = None;
                 for _ in 0..2 {
                     let mut output = ctx.run_ui(
@@ -1315,9 +1315,9 @@ mod tests {
                 let button = tree
                     .nodes
                     .iter()
-                    .find(|(_, node)| node.label() == Some(search.as_str()))
+                    .find(|(_, node)| node.label() == Some(create.as_str()))
                     .and_then(|(_, node)| node.bounds())
-                    .expect("the Search Your Library button");
+                    .expect("the Create a playlist button");
                 if let Some(label) = label {
                     assert!(
                         f64::from(label.right()) <= button.x0,
@@ -1512,8 +1512,11 @@ mod tests {
             let home = accessible_node(&tree, &gettext(locale, "Home"), Role::Button);
             let search = accessible_node(&tree, &gettext(locale, "Search"), Role::Button);
             accessible_node(&tree, &gettext(locale, "Create a playlist"), Role::Button);
-            accessible_node(&tree, &gettext(locale, "Albums"), Role::Button);
-            accessible_node(&tree, &gettext(locale, "Artists"), Role::Button);
+            accessible_node(
+                &tree,
+                &gettext(locale, "Collapse library (Covers only)"),
+                Role::Button,
+            );
             let liked = accessible_node(&tree, &gettext(locale, "Liked Songs"), Role::Button);
             accessible_frame(
                 &ctx,
@@ -1539,32 +1542,37 @@ mod tests {
             assert_eq!(app.page(), &Page::LikedSongs);
 
             let tree = accessible_frame(&ctx, &mut app, vec![]);
-            let library_search =
-                accessible_node(&tree, &gettext(locale, "Search Your Library"), Role::Button);
+            let collapse = accessible_node(
+                &tree,
+                &gettext(locale, "Collapse library (Covers only)"),
+                Role::Button,
+            );
             accessible_frame(
                 &ctx,
                 &mut app,
                 vec![accessible_action(
-                    library_search,
+                    collapse,
                     AccessibleAction::Click,
                     None,
                 )],
             );
+            assert!(crate::ui::sidebar::is_sidebar_collapsed(app.settings.sidebar_width));
             let tree = accessible_frame(&ctx, &mut app, vec![]);
-            accessible_node(
+            let expand = accessible_node(
                 &tree,
-                &gettext(locale, "Search in Your Library"),
-                Role::TextInput,
+                &gettext(locale, "Expand Your Library"),
+                Role::Button,
             );
-            app.library.filter = gettext(locale, "Liked Songs").to_uppercase();
-            let tree = accessible_frame(&ctx, &mut app, vec![]);
-            accessible_node(&tree, &gettext(locale, "Liked Songs"), Role::Button);
-            assert!(
-                !tree
-                    .nodes
-                    .iter()
-                    .any(|(_, node)| node.label() == Some("Discover Weekly"))
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(
+                    expand,
+                    AccessibleAction::Click,
+                    None,
+                )],
             );
+            assert!(!crate::ui::sidebar::is_sidebar_collapsed(app.settings.sidebar_width));
             app.backend.shutdown();
         }
     }
@@ -2177,21 +2185,13 @@ mod tests {
     #[test]
     fn the_podcasts_shelf_leaves_out_audiobooks() {
         let (ctx, mut app) = accessible_app("library-podcasts-audiobooks");
+        ctx.data_mut(|d| {
+            d.insert_temp(
+                egui::Id::new("sidebar-filter"),
+                crate::settings::LibraryShelf::Podcasts,
+            )
+        });
         let view = crate::ui::sidebar::show;
-        view_frame(&ctx, &mut app, vec![], view);
-        let painted = view_frame(&ctx, &mut app, vec![], view);
-        let chip = painted
-            .iter()
-            .find(|(text, _)| text == "Podcasts")
-            .unwrap()
-            .1
-            .center();
-        view_frame(
-            &ctx,
-            &mut app,
-            pointer_click(chip, egui::PointerButton::Primary),
-            view,
-        );
         let shows: Vec<(String, String)> = app
             .library
             .shows
@@ -2211,29 +2211,26 @@ mod tests {
     }
 
     #[test]
-    fn library_grid_toggle_is_accessible_and_persistent() {
+    fn library_collapse_toggle_is_accessible_and_persistent() {
         use egui::accesskit::{Action as AccessibleAction, Role};
-        let (ctx, mut app) = accessible_app("library-grid-toggle");
+        let (ctx, mut app) = accessible_app("library-collapse-toggle");
         let tree = accessible_frame(&ctx, &mut app, vec![]);
-        let grid = accessible_node(&tree, "Show as grid", Role::Button);
+        let collapse = accessible_node(&tree, "Collapse library (Covers only)", Role::Button);
         accessible_frame(
             &ctx,
             &mut app,
-            vec![accessible_action(grid, AccessibleAction::Click, None)],
+            vec![accessible_action(collapse, AccessibleAction::Click, None)],
         );
-        assert!(app.settings.sidebar_grid);
+        assert!(crate::ui::sidebar::is_sidebar_collapsed(app.settings.sidebar_width));
 
         let tree = accessible_frame(&ctx, &mut app, vec![]);
-        let list = accessible_node(&tree, "Show as list", Role::Button);
-        assert!(tree.nodes.iter().any(|(_, node)| {
-            node.role() == Role::Button && node.label() == Some("Discover Weekly")
-        }));
+        let expand = accessible_node(&tree, "Expand Your Library", Role::Button);
         accessible_frame(
             &ctx,
             &mut app,
-            vec![accessible_action(list, AccessibleAction::Click, None)],
+            vec![accessible_action(expand, AccessibleAction::Click, None)],
         );
-        assert!(!app.settings.sidebar_grid);
+        assert!(!crate::ui::sidebar::is_sidebar_collapsed(app.settings.sidebar_width));
         app.backend.shutdown();
     }
 
@@ -2622,7 +2619,7 @@ mod tests {
     #[test]
     fn library_sorts_finish_paging_without_retrying_failed_pages() {
         use crate::settings::{LibraryShelf, LibrarySort};
-        for (shelf, label, page) in [
+        for (shelf, _label, page) in [
             (LibraryShelf::Albums, "Albums", Page::Albums),
             (LibraryShelf::Artists, "Artists", Page::Artists),
             (LibraryShelf::Podcasts, "Podcasts", Page::Podcasts),
@@ -2634,20 +2631,7 @@ mod tests {
             app.library.artists.complete = false;
             app.library.artists.after = Some("next".into());
             app.library.shows.next_offset = Some(50);
-            view_frame(&ctx, &mut app, vec![], view);
-            let painted = view_frame(&ctx, &mut app, vec![], view);
-            let position = painted
-                .iter()
-                .find(|(text, _)| text == label)
-                .unwrap()
-                .1
-                .center();
-            view_frame(
-                &ctx,
-                &mut app,
-                pointer_click(position, egui::PointerButton::Primary),
-                view,
-            );
+            ctx.data_mut(|d| d.insert_temp(egui::Id::new("sidebar-filter"), shelf));
             app.actions.clear();
             view_frame(&ctx, &mut app, vec![], view);
             assert!(
@@ -8788,9 +8772,9 @@ mod tests {
     /// Clicking the search icon in the library header reveals and focuses
     /// the sidebar search field.
     #[test]
-    fn clicking_search_in_library_shelf_focuses_search_field() {
+    fn clicking_create_playlist_in_library_shelf_shows_dialog() {
         let root = std::env::temp_dir().join(format!(
-            "spoty-sidebar-search-focus-test-{}",
+            "spoty-sidebar-create-test-{}",
             std::process::id()
         ));
         let dirs = AppDirs {
@@ -8815,35 +8799,32 @@ mod tests {
         app.attach(&ctx);
         populate(&mut app);
 
-        // Use the button's actual bounds: the header can gain controls
-        // without changing which button this pointer test exercises.
         let tree = accessible_frame(&ctx, &mut app, vec![]);
-        let search = accessible_node(&tree, "Search Your Library", egui::accesskit::Role::Button);
+        let create = accessible_node(&tree, "Create a playlist", egui::accesskit::Role::Button);
         let bounds = tree
             .nodes
             .iter()
-            .find(|(id, _)| *id == search)
+            .find(|(id, _)| *id == create)
             .and_then(|(_, node)| node.bounds())
-            .expect("Search Your Library bounds");
-        let search_pos = egui::pos2(
+            .expect("Create a playlist bounds");
+        let create_pos = egui::pos2(
             ((bounds.x0 + bounds.x1) / 2.0) as f32,
             ((bounds.y0 + bounds.y1) / 2.0) as f32,
         );
 
-        // Click on the search button in the Library shelf header.
         frame_events(
             &ctx,
             &mut app,
             vec![
-                egui::Event::PointerMoved(search_pos),
+                egui::Event::PointerMoved(create_pos),
                 egui::Event::PointerButton {
-                    pos: search_pos,
+                    pos: create_pos,
                     button: egui::PointerButton::Primary,
                     pressed: true,
                     modifiers: egui::Modifiers::NONE,
                 },
                 egui::Event::PointerButton {
-                    pos: search_pos,
+                    pos: create_pos,
                     button: egui::PointerButton::Primary,
                     pressed: false,
                     modifiers: egui::Modifiers::NONE,
@@ -8851,16 +8832,12 @@ mod tests {
             ],
         );
 
-        // Advance one frame so the focused widget processes events.
         frame(&ctx, &mut app);
 
-        // Verify the search field is shown and has keyboard focus.
-        let search_id = egui::Id::new("sidebar-search");
-        let has_focus = ctx.memory(|m| m.has_focus(search_id));
-        assert!(
-            has_focus,
-            "sidebar-search must have keyboard focus after clicking the search icon"
-        );
+        assert!(matches!(
+            app.dialog,
+            Some(Dialog::CreatePlaylist { .. })
+        ));
 
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
