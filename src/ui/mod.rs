@@ -261,17 +261,28 @@ fn central(app: &mut App, ui: &mut egui::Ui) {
         .frame(Frame::new().fill(palette.window))
         .show(ui, |ui| {
             let rect = ui.max_rect();
-            if let Some(tint) = tint {
+            let ambient = if palette.dark {
+                Some(Color32::from_rgb(0x23, 0x5a, 0x50))
+            } else {
+                None
+            };
+            let effective_tint = match (tint, ambient) {
+                (Some(t), Some(a)) => Some(blend(a, t, 0.5)),
+                (Some(t), None) => Some(t),
+                (None, Some(a)) => Some(a),
+                (None, None) => None,
+            };
+            if let Some(top_tint) = effective_tint {
                 let strength = if matches!(
                     app.page(),
                     Page::Home | Page::Search | Page::Settings | Page::Queue
                 ) {
-                    0.45
+                    0.55
                 } else {
                     0.85
                 };
-                let top = blend(palette.window, tint, strength);
-                let header = Rect::from_min_size(rect.min, vec2(rect.width(), 340.0));
+                let top = blend(palette.window, top_tint, strength);
+                let header = Rect::from_min_size(rect.min, vec2(rect.width(), 380.0));
                 widgets::paint_vertical_gradient(ui, header, top, palette.window);
             }
             ui.spacing_mut().item_spacing = vec2(8.0, 6.0);

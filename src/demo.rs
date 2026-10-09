@@ -1510,7 +1510,7 @@ mod tests {
             accessible_frame(&ctx, &mut app, vec![]);
             let tree = accessible_frame(&ctx, &mut app, vec![]);
             let home = accessible_node(&tree, &gettext(locale, "Home"), Role::Button);
-            let search = accessible_node(&tree, &gettext(locale, "Search"), Role::Button);
+            let artists = accessible_node(&tree, &gettext(locale, "Artists"), Role::Button);
             accessible_node(&tree, &gettext(locale, "Create a playlist"), Role::Button);
             accessible_node(
                 &tree,
@@ -1528,7 +1528,7 @@ mod tests {
                 &mut app,
                 vec![keyboard(egui::Key::Tab, egui::Modifiers::NONE)],
             );
-            assert_eq!(tree.focus, search, "Tab order must survive translation");
+            assert_eq!(tree.focus, artists, "Tab order must survive translation");
             accessible_frame(
                 &ctx,
                 &mut app,
@@ -2488,6 +2488,7 @@ mod tests {
         use egui::accesskit::Role;
         let (ctx, mut app) = accessible_app("library-grid-drop-highlight");
         app.settings.sidebar_grid = true;
+        accessible_frame(&ctx, &mut app, vec![]);
         let tree = accessible_frame(&ctx, &mut app, vec![]);
         let liked = tree
             .nodes
@@ -7647,7 +7648,7 @@ mod tests {
         // dragged row above Liked Songs. Where the list begins
         // depends on the loaded fonts, so the sweep does not hardcode it.
         let mut dropped = false;
-        for step in 0..40 {
+        for step in 0..60 {
             let pos = egui::pos2(120.0, 100.0 + step as f32 * 10.0);
             egui::DragAndDrop::set_payload(
                 &ctx,
@@ -7724,7 +7725,7 @@ mod tests {
         // right under Liked Songs, between what were the first two
         // unpinned playlists.
         let mut dropped = false;
-        for step in 0..40 {
+        for step in 0..60 {
             let pos = egui::pos2(120.0, 100.0 + step as f32 * 10.0);
             egui::DragAndDrop::set_payload(
                 &ctx,
